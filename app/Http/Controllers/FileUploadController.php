@@ -1,7 +1,9 @@
 <?php
 
 namespace App\Http\Controllers;
-// use App\Models\Asset;
+use App\Models\Asset;
+use App\Models\Folder;
+use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
@@ -175,26 +177,34 @@ class FileUploadController extends Controller
                 return ['success' => false, 'error' => 'Failed to store file'];
             }
 
+            // Save to database
+            $asset = Asset::create([
+                'name' => $file->getClientOriginalName(),
+                'file_path' => $path,
+                'file_type' => $this->getFileType($mimeType),
+                'file_size' => $size,
+                'folder_id' => $folderId ? (int) $folderId : null,
+                'user_id' => auth()->id(),
+                'project_id' => $this->getProjectIdFromFolder($folderId),
+                'uploaded_by' => auth()->id(),
+            ]);
+
             return [
                 'success' => true,
                 'file' => [
-                    'filename' => $filename,
-                    'original_name' => $file->getClientOriginalName(),
-                    'mime_type' => $mimeType,
-                    'size' => $size,
-                    'path' => $path,
-                    'hash' => $hash,
-                    'folder' => $folder,
-                    'url' => Storage::url($path),
-                    'is_image' => str_starts_with($mimeType, 'image/'),
-                    'is_video' => str_starts_with($mimeType, 'video/'),
-                    'is_document' => in_array($mimeType, [
-                        'application/pdf',
-                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    ]),
-                    'is_text' => str_starts_with($mimeType, 'text/') || $mimeType === 'text/markdown',
-                    'formatted_size' => $this->formatFileSize($size),
+                    'id' => $asset->id,
+                    'name' => $asset->name,
+                    'file_path' => $asset->file_path,
+                    'file_type' => $asset->file_type,
+                    'file_size' => $asset->file_size,
+                    'folder_id' => $asset->folder_id,
+                    'url' => Storage::url($asset->file_path),
+                    'is_image' => $asset->file_type === 'image',
+                    'is_video' => $asset->file_type === 'video',
+                    'is_document' => in_array($asset->file_type, ['pdf', 'doc']),
+                    'is_text' => $asset->file_type === 'text',
+                    'formatted_size' => $asset->formatted_size,
+                    'created_at' => $asset->created_at->format('Y-m-d H:i:s'),
                 ],
             ];
             
@@ -215,8 +225,23 @@ class FileUploadController extends Controller
         if (str_starts_with($mimeType, 'video/')) return 'video';
         if (str_starts_with($mimeType, 'text/')) return 'text';
         if ($mimeType === 'text/markdown') return 'text';
+        if ($mimeType === 'application/pdf') return 'pdf';
+        if (in_array($mimeType, [
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])) return 'doc';
         
-        return 'document';
+        return 'doc'; // default fallback
+    }
+
+    private function getProjectIdFromFolder(?int $folderId): ?int
+    {
+        if (!$folderId) {
+            return null;
+        }
+        
+        $folder = Folder::find($folderId);
+        return $folder ? $folder->project_id : null;
     }
 
     private function formatFileSize(int $bytes): string
@@ -246,36 +271,40 @@ class FileUploadController extends Controller
             $files = [];
             $folders = [];
             
-            if (Storage::disk('public')->exists($folderPath)) {
-                // Get files
-                $fileItems = Storage::disk('public')->files($folderPath);
-                foreach ($fileItems as $file) {
-                    $fullPath = storage_path('app/public/' . $file);
-                    if (file_exists($fullPath)) {
-                        $mimeType = mime_content_type($fullPath);
-                        $size = filesize($fullPath);
-                        
-                        $files[] = [
-                            'filename' => basename($file),
-                            'original_name' => basename($file),
-                            'mime_type' => $mimeType,
-                            'size' => $size,
-                            'path' => $file,
-                            'url' => Storage::url($file),
-                            'is_image' => str_starts_with($mimeType, 'image/'),
-                            'is_video' => str_starts_with($mimeType, 'video/'),
-                            'is_document' => in_array($mimeType, [
-                                'application/pdf',
-                                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                            ]),
-                            'is_text' => str_starts_with($mimeType, 'text/') || $mimeType === 'text/markdown',
-                            'formatted_size' => $this->formatFileSize($size),
-                            'modified_at' => date('Y-m-d H:i:s', filemtime($fullPath)),
-                        ];
-                    }
-                }
+            // Get files from database for this folder
+            $folderId = null;
+            if ($folder !== 'root') {
+                $folderModel = Folder::where('name', $folder)->first();
+                $folderId = $folderModel ? $folderModel->id : null;
+            }
+            
+            if ($folderId || $folder === 'root') {
+                $assets = Asset::where('folder_id', $folderId)
+                    ->where('user_id', auth()->id())
+                    ->with('folder')
+                    ->get();
                 
+                $files = $assets->map(function ($asset) {
+                    return [
+                        'id' => $asset->id,
+                        'name' => $asset->name,
+                        'file_path' => $asset->file_path,
+                        'file_type' => $asset->file_type,
+                        'file_size' => $asset->file_size,
+                        'path' => $asset->file_path,
+                        'url' => Storage::url($asset->file_path),
+                        'is_image' => $asset->file_type === 'image',
+                        'is_video' => $asset->file_type === 'video',
+                        'is_document' => in_array($asset->file_type, ['pdf', 'doc']),
+                        'is_text' => $asset->file_type === 'text',
+                        'formatted_size' => $asset->formatted_size,
+                        'created_at' => $asset->created_at->format('Y-m-d H:i:s'),
+                    ];
+                });
+            }
+            
+            // Get folders from file system (for now, until we have full folder system)
+            if (Storage::disk('public')->exists($folderPath)) {
                 // Get folders
                 $folderItems = Storage::disk('public')->directories($folderPath);
                 foreach ($folderItems as $dir) {
@@ -404,11 +433,19 @@ class FileUploadController extends Controller
                 ], 404);
             }
 
+            // Delete from database first
+            $asset = Asset::where('path', $path)->first();
+            if ($asset) {
+                $asset->delete();
+            }
+
+            // Delete from file system
             Storage::disk('public')->delete($path);
 
             Log::info('File deleted', [
                 'user_id' => auth()->id(),
                 'file_path' => $path,
+                'asset_id' => $asset ? $asset->id : null,
                 'timestamp' => now()->toISOString()
             ]);
 
@@ -430,6 +467,204 @@ class FileUploadController extends Controller
                 'error' => 'Failed to delete file',
             ], 500);
         }
+    }
+
+    public function fileManager(Request $request)
+    {
+        $folder = $request->input('folder', 'root');
+        $folderPath = $folder === 'root' ? 'uploads' : 'uploads/' . trim($folder, '/');
+        
+        $files = [];
+        $folders = [];
+        
+        // Get files from database for this folder
+        $folderId = null;
+        if ($folder !== 'root') {
+            $folderModel = Folder::where('name', $folder)->first();
+            $folderId = $folderModel ? $folderModel->id : null;
+        }
+        
+        if ($folderId || $folder === 'root') {
+            $assets = Asset::where('folder_id', $folderId)
+                ->where('user_id', auth()->id())
+                ->with('folder')
+                ->get();
+            
+            $files = $assets->map(function ($asset) {
+                return [
+                    'id' => $asset->id,
+                    'name' => $asset->name,
+                    'file_path' => $asset->file_path,
+                    'file_type' => $asset->file_type,
+                    'file_size' => $asset->file_size,
+                    'path' => $asset->file_path,
+                    'url' => Storage::url($asset->file_path),
+                    'is_image' => $asset->file_type === 'image',
+                    'is_video' => $asset->file_type === 'video',
+                    'is_document' => in_array($asset->file_type, ['pdf', 'doc']),
+                    'is_text' => $asset->file_type === 'text',
+                    'formatted_size' => $asset->formatted_size,
+                    'created_at' => $asset->created_at->format('Y-m-d H:i:s'),
+                ];
+            });
+        }
+        
+        // Get folders from file system
+        if (Storage::disk('public')->exists($folderPath)) {
+            $folderItems = Storage::disk('public')->directories($folderPath);
+            foreach ($folderItems as $dir) {
+                $folders[] = [
+                    'name' => basename($dir),
+                    'path' => $dir,
+                    'parent_folder' => $folder,
+                ];
+            }
+        }
+
+        return view('file-manager', [
+            'files' => $files,
+            'folders' => $folders,
+            'currentFolder' => $folder,
+            'breadcrumb' => $this->generateBreadcrumb($folder)
+        ]);
+    }
+
+    public function uploadFiles(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'files' => 'required|array|max:10',
+            'files.*' => 'required|file|max:512000', // 500MB max per file
+            'folder' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $uploadedFiles = [];
+        $errors = [];
+        $folder = $request->input('folder', 'root');
+
+        foreach ($request->file('files') as $index => $file) {
+            try {
+                $result = $this->processFile($file, $folder);
+                if ($result['success']) {
+                    $uploadedFiles[] = $result['file'];
+                } else {
+                    $errors["files.{$index}"] = $result['error'];
+                }
+            } catch (\Exception $e) {
+                $errors["files.{$index}"] = 'Upload failed: ' . $e->getMessage();
+            }
+        }
+
+        if (count($uploadedFiles) > 0) {
+            return redirect()->route('file-manager', ['folder' => $folder])
+                ->with('success', "Successfully uploaded " . count($uploadedFiles) . " files");
+        } else {
+            return redirect()->back()
+                ->withErrors(['upload' => 'No files were uploaded successfully'])
+                ->withInput();
+        }
+    }
+
+    public function createNewFolder(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'parent_folder' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $name = $request->input('name');
+        $parentFolder = $request->input('parent_folder', 'root');
+        
+        $folderPath = $parentFolder === 'root' 
+            ? 'uploads/' . $name 
+            : 'uploads/' . trim($parentFolder, '/') . '/' . $name;
+
+        try {
+            if (Storage::disk('public')->exists($folderPath)) {
+                return redirect()->back()
+                    ->withErrors(['name' => 'Folder already exists'])
+                    ->withInput();
+            }
+
+            Storage::disk('public')->makeDirectory($folderPath);
+
+            return redirect()->route('file-manager', ['folder' => $parentFolder])
+                ->with('success', 'Folder created successfully');
+            
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withErrors(['create' => 'Failed to create folder'])
+                ->withInput();
+        }
+    }
+
+    public function deleteAssetFile(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'path' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator);
+        }
+
+        $path = $request->input('path');
+
+        try {
+            if (!Storage::disk('public')->exists($path)) {
+                return redirect()->back()
+                    ->withErrors(['path' => 'File not found']);
+            }
+
+            // Delete from database first
+            $asset = Asset::where('file_path', $path)->first();
+            if ($asset) {
+                $asset->delete();
+            }
+
+            // Delete from file system
+            Storage::disk('public')->delete($path);
+
+            return redirect()->back()
+                ->with('success', 'File deleted successfully');
+            
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withErrors(['delete' => 'Failed to delete file']);
+        }
+    }
+
+    private function generateBreadcrumb(string $folder): array
+    {
+        if ($folder === 'root') {
+            return [];
+        }
+        
+        $parts = explode('/', str_replace('uploads/', '', $folder));
+        $breadcrumb = [];
+        $currentPath = '';
+        
+        foreach ($parts as $part) {
+            $currentPath .= ($currentPath ? '/' : '') . $part;
+            $breadcrumb[] = [
+                'name' => $part,
+                'path' => 'uploads/' . $currentPath
+            ];
+        }
+        
+        return $breadcrumb;
     }
 
     public function deleteFolder(Request $request): JsonResponse

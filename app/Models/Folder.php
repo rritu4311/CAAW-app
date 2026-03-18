@@ -22,4 +22,9 @@ class Folder extends Model
     {
         return $this->belongsTo(Project::class);
     }
+
+    public function assets()
+    {
+        return $this->hasMany(Asset::class)->orderBy('created_at', 'desc');
+    }
 }

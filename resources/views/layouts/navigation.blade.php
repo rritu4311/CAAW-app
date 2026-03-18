@@ -18,7 +18,7 @@
                     <x-nav-link :href="route('workspaces.page')" :active="request()->routeIs('workspaces.page')">
                         {{ __('Workspaces') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('file-manager')" :active="request()->routeIs('file-manager')">
+                    <x-nav-link :href="route('folder-manager')" :active="request()->routeIs('folder-manager')">
                         {{ __('Files') }}
                     </x-nav-link>
                 </div>
@@ -93,7 +93,7 @@
             <x-responsive-nav-link :href="route('workspaces.page')" :active="request()->routeIs('workspaces.page')">
                 {{ __('Workspaces') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('file-manager')" :active="request()->routeIs('file-manager')">
+            <x-responsive-nav-link :href="route('folder-manager')" :active="request()->routeIs('folder-manager')">
                 {{ __('Files') }}
             </x-responsive-nav-link>
         </div>

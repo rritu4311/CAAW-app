@@ -23,19 +23,13 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     
-    // File management routes
-    Route::get('/files', [FileUploadController::class, 'listFiles'])->name('files.list');
-    Route::post('/files/upload', [FileUploadController::class, 'upload'])->name('files.upload');
-    Route::delete('/files/delete', [FileUploadController::class, 'deleteFile'])->name('files.delete');
-    
-    // Folder management routes
-    Route::post('/folders/create', [FileUploadController::class, 'createFolder'])->name('folders.create');
-    Route::delete('/folders/delete', [FileUploadController::class, 'deleteFolder'])->name('folders.delete');
-    
-    // File manager page
-    Route::get('/file-manager', function () {
-        return view('file-manager');
-    })->name('file-manager');
+    // Folder management routes (pure Laravel)
+    Route::get('/folder-manager', [FolderController::class, 'index'])->name('folder-manager');
+    Route::post('/folders/store', [FolderController::class, 'store'])->name('folders.store');
+    Route::post('/folders/upload', [FolderController::class, 'uploadFiles'])->name('folders.upload');
+    Route::delete('/folders/file', [FolderController::class, 'deleteFile'])->name('folders.file.delete');
+    Route::get('/folders/{folder}', [FolderController::class, 'show'])->name('folders.show');
+    Route::delete('/folders/{folder}', [FolderController::class, 'destroy'])->name('folders.destroy');
     
     // Workspace management routes
     Route::get('/workspaces', [WorkspaceController::class, 'index'])->name('workspaces.index');
@@ -69,11 +63,6 @@ Route::middleware('auth')->group(function () {
 
     //Opening for project
     Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
-    
-    // Folder management routes
-    Route::post('/folders', [FolderController::class,'store'])->name('folders.store');
-    Route::get('/folders/{folder}', [FolderController::class,'show'])->name('folders.show');
-    Route::delete('/folders/{folder}', [FolderController::class,'destroy'])->name('folders.destroy');
 });
 
 
