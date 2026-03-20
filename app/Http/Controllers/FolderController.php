@@ -51,7 +51,7 @@ class FolderController extends Controller
         
         if ($folderId || $folder === 'root') {
             $assets = Asset::where('folder_id', $folderId)
-                ->where('user_id', auth()->id())
+                ->where('uploaded_by', auth()->id())
                 ->with('folder')
                 ->get();
             
@@ -98,7 +98,8 @@ class FolderController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'parent_folder' => 'nullable|string|max:255',
+            'parent_folder_id' => 'nullable|exists:folders,id',
+            'project_id' => 'required|exists:projects,id',
         ]);
 
         if ($validator->fails()) {
@@ -107,43 +108,28 @@ class FolderController extends Controller
                 ->withInput();
         }
 
-        $name = $request->input('name');
-        $parentFolder = $request->input('parent_folder', 'root');
-        $parentFolderId = $request->input('parent_folder');
-        
-        // Handle different redirect scenarios
-        $redirectRoute = 'folder-manager';
-        $redirectParams = ['folder' => $parentFolder];
-        
-        // If parent_folder is a numeric ID, we're coming from folder show page
-        if (is_numeric($parentFolderId)) {
-            $parentFolderModel = Folder::find($parentFolderId);
-            if ($parentFolderModel) {
-                $parentFolder = $parentFolderModel->name;
-                $redirectRoute = 'folders.show';
-                $redirectParams = ['folder' => $parentFolderId];
-            }
-        }
-        
-        $folderPath = $parentFolder === 'root' 
-            ? 'uploads/' . $name 
-            : 'uploads/' . trim($parentFolder, '/') . '/' . $name;
-
         try {
-            if (Storage::disk('public')->exists($folderPath)) {
-                return redirect()->back()
-                    ->withErrors(['name' => 'Folder already exists'])
-                    ->withInput();
+            $folder = Folder::create([
+                'name' => $request->input('name'),
+                'project_id' => $request->input('project_id'),
+                'parent_folder_id' => $request->input('parent_folder_id'),
+                'order' => 0,
+            ]);
+
+            // Handle different redirect scenarios
+            if ($folder->parent_folder_id) {
+                // Redirect to parent folder
+                return redirect()->route('folders.show', $folder->parent_folder_id)
+                    ->with('success', 'Folder created successfully');
+            } else {
+                // Redirect to project
+                return redirect()->route('projects.show', $folder->project_id)
+                    ->with('success', 'Folder created successfully');
             }
-
-            Storage::disk('public')->makeDirectory($folderPath);
-
-            return redirect()->route($redirectRoute, $redirectParams)
-                ->with('success', 'Folder created successfully');
             
         } catch (\Exception $e) {
             return redirect()->back()
-                ->withErrors(['create' => 'Failed to create folder'])
+                ->withErrors(['create' => 'Failed to create folder: ' . $e->getMessage()])
                 ->withInput();
         }
     }
@@ -174,8 +160,22 @@ class FolderController extends Controller
 
     public function destroy(Folder $folder)
     {
+        // Store parent information before deletion
+        $parentFolder = $folder->parent;
+        $project = $folder->project;
+        
         $this->deleteFolderRecursive($folder);
-        return back()->with('success','Folder deleted successfully');
+        
+        // Determine redirect destination
+        if ($parentFolder) {
+            // If folder has a parent, redirect to parent folder
+            return redirect()->route('folders.show', $parentFolder->id)
+                ->with('success', 'Folder deleted successfully');
+        } else {
+            // If folder is in project root, redirect to project
+            return redirect()->route('projects.show', $project->id)
+                ->with('success', 'Folder deleted successfully');
+        }
     }
 
     private function deleteFolderRecursive(Folder $folder)

@@ -46,7 +46,7 @@
                         <!-- Actions -->
                         <div class="flex space-x-2">
                             <!-- Create Subfolder Button -->
-                            <a href="{{ route('folders.show', $folder->id) }}?create_subfolder=1" 
+                            <a href="#" onclick="openModal('createFolderModal{{ $folder->id }}')" 
                                class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors inline-block">
                                 Create Subfolder
                             </a>
@@ -77,7 +77,8 @@
                                 <div class="flex items-center space-x-4">
                                     <input type="text" name="name" placeholder="Subfolder name" required
                                            class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-600 dark:text-white">
-                                    <input type="hidden" name="parent_folder" value="{{ $folder->id }}">
+                                    <input type="hidden" name="parent_folder_id" value="{{ $folder->id }}">
+                                    <input type="hidden" name="project_id" value="{{ $folder->project->id }}">
                                     <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                                         Create
                                     </button>
@@ -144,21 +145,47 @@
                         @if($folder->children->count() > 0)
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 @foreach($folder->children as $child)
-                                    <div class="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
-                                        <a href="{{ route('folders.show', $child->id) }}" class="block">
-                                            <div class="flex items-center mb-2">
-                                                <svg class="w-6 h-6 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
-                                                </svg>
-                                                <span class="font-medium text-gray-800">{{ $child->name }}</span>
+                                    <div class="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <a href="{{ route('folders.show', $child->id) }}" class="flex-1">
+                                                <div class="flex items-center">
+                                                    <svg class="w-6 h-6 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                                                    </svg>
+                                                    <span class="font-medium text-gray-800">{{ $child->name }}</span>
+                                                </div>
+                                            </a>
+                                            
+                                            <!-- Action Buttons -->
+                                            <div class="flex space-x-1">
+                                                <!-- Edit Button -->
+                                                <button onclick="openEditFolderModal({{ $child->id }}, '{{ $child->name }}')" 
+                                                        class="p-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700" 
+                                                        title="Edit Folder">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                    </svg>
+                                                </button>
+                                                
+                                                <!-- Delete Button -->
+                                                <form action="{{ route('folders.destroy', $child->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this folder and all its contents?')" class="inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="p-1 text-xs bg-red-600 text-white rounded hover:bg-red-700" 
+                                                            title="Delete Folder">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                        </svg>
+                                                    </button>
+                                                </form>
                                             </div>
-                                            <p class="text-sm text-gray-600">
-                                                {{ $child->children->count() }} subfolder(s)
-                                            </p>
-                                            <p class="text-xs text-gray-500 mt-1">
-                                                Created {{ $child->created_at->format('M d, Y') }}
-                                            </p>
-                                        </a>
+                                        </div>
+                                        <p class="text-sm text-gray-600">
+                                            {{ $child->children->count() }} subfolder(s)
+                                        </p>
+                                        <p class="text-xs text-gray-500 mt-1">
+                                            Created {{ $child->created_at->format('M d, Y') }}
+                                        </p>
                                     </div>
                                 @endforeach
                             </div>
@@ -235,6 +262,9 @@
 
     <!-- Create Subfolder Modal -->
     <x-create-folder-modal :projectId="$folder->project->id" :parentFolderId="$folder->id" />
+    
+    <!-- Edit Folder Modal -->
+    <x-edit-folder-modal />
 
 </x-app-layout>
 

@@ -1,0 +1,81 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class ProjectCollaborator extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'project_id',
+        'user_id',
+        'role',
+        'invited_at',
+        'approved_at',
+    ];
+
+    protected $casts = [
+        'invited_at' => 'datetime',
+        'approved_at' => 'datetime',
+    ];
+
+    /**
+     * Get the project that owns this collaboration.
+     */
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * Get the user that is part of this collaboration.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Check if the collaboration has been approved.
+     */
+    public function isApproved(): bool
+    {
+        return !is_null($this->approved_at);
+    }
+
+    /**
+     * Check if the user is an owner collaborator.
+     */
+    public function isOwner(): bool
+    {
+        return $this->role === 'owner';
+    }
+
+    /**
+     * Check if the user is an admin collaborator.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Check if the user is a reviewer.
+     */
+    public function isReviewer(): bool
+    {
+        return $this->role === 'reviewer';
+    }
+
+    /**
+     * Check if the user is a viewer.
+     */
+    public function isViewer(): bool
+    {
+        return $this->role === 'viewer';
+    }
+}

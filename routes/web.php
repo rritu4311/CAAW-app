@@ -61,6 +61,9 @@ Route::middleware('auth')->group(function () {
     Route::put('/workspaces/{workspace}/projects/{project}', [WorkareaController::class, 'update'])->name('workspace.update');
     Route::delete('/workspaces/{workspace}/projects/{project}', [WorkareaController::class, 'destroy'])->name('workspace.destroy');
 
+    // Activity Log route
+    Route::get('/activity-log', [WorkspaceController::class, 'activityLog'])->name('activity.log');
+
     //Opening for project
     Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
 });

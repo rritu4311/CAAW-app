@@ -52,5 +52,8 @@
 
     <!-- Create Folder Modal -->
     <x-create-folder-modal :projectId="$project->id" />
+    
+    <!-- Edit Folder Modal -->
+    <x-edit-folder-modal />
 
 </x-app-layout>

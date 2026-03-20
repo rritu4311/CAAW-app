@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Workspace;
+use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
@@ -77,5 +78,64 @@ class WorkspaceController extends Controller
 
         return redirect()->route('workspaces.page')
             ->with('success', 'Workspace deleted successfully');
+    }
+
+    public function activityLog(Request $request)
+    {
+        $user = $request->user();
+
+        // Get all workspaces owned by the user
+        $workspaces = $user->workspaces()->orderBy('created_at', 'desc')->get()->map(function ($item) {
+            $item->type = 'workspace';
+            return $item;
+        });
+
+        // Get all projects created by the user (across all workspaces)
+        $projects = Project::where('created_by', $user->id)->orderBy('created_at', 'desc')->get()->map(function ($item) {
+            $item->type = 'project';
+            return $item;
+        });
+
+        // Get all folders (through projects owned by user)
+        $folders = collect();
+        foreach ($projects as $project) {
+            $folders = $folders->merge($project->folders()->orderBy('created_at', 'desc')->get());
+        }
+        $folders = $folders->map(function ($item) {
+            $item->type = 'folder';
+            return $item;
+        });
+
+        // Get all assets (through folders)
+        $assets = collect();
+        foreach ($folders as $folder) {
+            $assets = $assets->merge($folder->assets()->orderBy('created_at', 'desc')->get());
+        }
+        $assets = $assets->map(function ($item) {
+            $item->type = 'asset';
+            return $item;
+        });
+
+        // Combine all items and sort by creation time (most recent first)
+        $activities = collect()
+            ->merge($workspaces)
+            ->merge($projects)
+            ->merge($folders)
+            ->merge($assets)
+            ->sortByDesc('created_at')
+            ->values();
+
+        // Paginate the activities (10 per page)
+        $perPage = 10;
+        $currentPage = $request->get('page', 1);
+        $paginatedActivities = new \Illuminate\Pagination\LengthAwarePaginator(
+            $activities->forPage($currentPage, $perPage),
+            $activities->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'pageName' => 'page']
+        );
+
+        return view('activity-log', compact('paginatedActivities'));
     }
 }
