@@ -94,7 +94,7 @@
                                             @endif
                                         </div>
                                         <div class="text-sm text-gray-500 dark:text-gray-400 ml-4">
-                                            {{ $activity->created_at->format('M d, Y H:i') }}
+                                            {{ $activity->created_at->setTimezone('Asia/Kolkata')->format('M d, Y H:i') }}
                                         </div>
                                     </div>
                                 </div>

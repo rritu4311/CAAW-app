@@ -118,6 +118,33 @@ header {
   height: 20px;
 }
 
+/* User Box Styles */
+.user-box {
+  display: inline-block;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  text-decoration: none;
+  transition: background-color 0.3s;
+}
+
+.user-box:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Dark mode styles */
+.dark .user-box {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #e5e7eb;
+}
+
+.dark .user-box:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
 /* Mobile */
 @media (max-width: 768px) {
 
@@ -181,31 +208,31 @@ header {
         <a href="{{ route('activity.log') }}">Activity Log</a>
       </li>
 
-      <!-- Theme Toggle -->
-      <li class="menu-item" x-data="{ isDark: false }" x-init="isDark = document.documentElement.classList.contains('dark')">
-        <button @click="toggleTheme()" class="theme-toggle-btn" :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'">
-          <!-- Sun icon for light mode (shown when dark) -->
-          <svg x-show="isDark" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-          </svg>
-          <!-- Moon icon for dark mode (shown when light) -->
-          <svg x-show="!isDark" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-          </svg>
-        </button>
-      </li>
-
-      <!-- Dropdown -->
-      <li class="dropdown" id="dropdown">
-        <a href="#" id="dropdownBtn" class="user-box">{{ Auth::user()->name }} </a>
-
-        <div class="dropdown-menu">
-          <a href="{{ route('profile.edit') }}">Profile</a>
-          <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
-        </div>
-      </li>
-
     </ul>
+
+    <!-- Theme Toggle -->
+    <div class="menu-item" x-data="{ isDark: false }" x-init="isDark = document.documentElement.classList.contains('dark')">
+      <button @click="toggleTheme()" class="theme-toggle-btn" :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'">
+        <!-- Sun icon for light mode (shown when dark) -->
+        <svg x-show="isDark" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+        </svg>
+        <!-- Moon icon for dark mode (shown when light) -->
+        <svg x-show="!isDark" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Dropdown -->
+    <div class="dropdown" id="dropdown">
+      <a href="#" id="dropdownBtn" class="user-box">{{ Auth::user()->name }}</a>
+
+      <div class="dropdown-menu">
+        <a href="{{ route('profile.edit') }}">Profile</a>
+        <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
+      </div>
+    </div>
 
     <div class="menu-toggle" id="menuToggle">&#9776;</div>
   </nav>
@@ -244,10 +271,24 @@ document.querySelectorAll(".nav-links a").forEach(link => {
   });
 });
 
+// Close menu when clicking outside (mobile UX)
+document.addEventListener("click", (e) => {
+  if (!nav.contains(e.target) && !toggle.contains(e.target)) {
+    nav.classList.remove("active");
+  }
+});
+
 // Dropdown toggle
 dropdownBtn.addEventListener("click", (e) => {
   e.preventDefault();
   dropdown.classList.toggle("active");
+});
+
+// Close dropdown when clicking outside
+document.addEventListener("click", (e) => {
+  if (!dropdown.contains(e.target)) {
+    dropdown.classList.remove("active");
+  }
 });
 
 // Theme toggle function
