@@ -24,7 +24,9 @@ class WorkspaceController extends Controller
                 'name' => 'required|string|max:255'
             ]);
 
-            $workspace = $request->user()->workspaces()->create($validated);
+            $validated['owner_id'] = $request->user()->id;
+            $workspace = Workspace::create($validated);
+            $workspace->members()->attach($request->user()->id, ['role' => 'owner']);
 
             return redirect()->route('workspaces.page')
                 ->with('success', 'Workspace created successfully');

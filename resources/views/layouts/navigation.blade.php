@@ -224,6 +224,9 @@ header {
       </button>
     </div>
 
+    <!-- Notifications -->
+    @include('components.notification-icon')
+
     <!-- Dropdown -->
     <div class="dropdown" id="dropdown">
       <a href="#" id="dropdownBtn" class="user-box">{{ Auth::user()->name }}</a>

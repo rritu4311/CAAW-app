@@ -50,7 +50,18 @@
                                         <div class="flex-1">
                                             <div class="flex items-center justify-between mb-3">
                                                 <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{{ $project->name }}</h3>
-                                                <div class="flex space-x-2">
+                                                <div class="flex items-center space-x-2">
+                                                    @php
+                                                        $pendingCount = $project->pendingApprovalsCount();
+                                                    @endphp
+                                                    @if($pendingCount > 0)
+                                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" title="{{ $pendingCount }} pending approval{{ $pendingCount > 1 ? 's' : '' }}">
+                                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                            </svg>
+                                                            {{ $pendingCount }} pending
+                                                        </span>
+                                                    @endif
                                                     <form action="{{ route('workspace.edit', [$workspace, $project]) }}" method="GET" class="inline">
                                                         <button type="submit" 
                                                                 class="bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white p-2 rounded transition duration-200 border border-blue-700 dark:border-blue-600"

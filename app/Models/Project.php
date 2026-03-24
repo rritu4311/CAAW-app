@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Project extends Model
 {
@@ -42,5 +43,20 @@ class Project extends Model
     public function folders()
     {
         return $this->hasMany(Folder::class);
+    }
+
+    public function assets(): HasMany
+    {
+        return $this->hasMany(Asset::class);
+    }
+
+    public function pendingApprovalsCount(): int
+    {
+        return $this->assets()
+            ->withCount(['approvals' => function ($query) {
+                $query->where('status', 'pending');
+            }])
+            ->get()
+            ->sum('approvals_count');
     }
 }

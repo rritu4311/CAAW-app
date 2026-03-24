@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Asset extends Model
 {
@@ -45,6 +46,16 @@ class Asset extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(Approval::class);
+    }
+
+    public function pendingApprovals(): HasMany
+    {
+        return $this->hasMany(Approval::class)->where('status', 'pending');
     }
 
     public function isImage(): bool

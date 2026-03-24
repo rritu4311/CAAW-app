@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Http\Controllers;
-
 use App\Models\Project;
 use App\Models\Workspace;
 use Illuminate\Http\Request;
@@ -57,6 +56,7 @@ class WorkareaController extends Controller
         return view('project.show', compact('workspace', 'project'));
     }
 
+    
     public function update(Request $request, Workspace $workspace, Project $project)
     {
         if (!$workspace->isOwnedBy($request->user()) || $project->workspace_id !== $workspace->id) {

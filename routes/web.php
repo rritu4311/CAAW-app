@@ -6,6 +6,7 @@ use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkareaController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\FolderController;
+use App\Http\Controllers\NotificationController;
 use App\Models\Workspace;
 use App\Models\Project;
 use Illuminate\Support\Facades\Route;
@@ -63,6 +64,14 @@ Route::middleware('auth')->group(function () {
 
     // Activity Log route
     Route::get('/activity-log', [WorkspaceController::class, 'activityLog'])->name('activity.log');
+
+    // Notification routes
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/recent', [NotificationController::class, 'recent'])->name('notifications.recent');
+    Route::patch('/notifications/{id}/mark-read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
+    Route::patch('/notifications/{id}/mark-unread', [NotificationController::class, 'markAsUnread'])->name('notifications.mark-unread');
+    Route::patch('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
 
     //Opening for project
     Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
