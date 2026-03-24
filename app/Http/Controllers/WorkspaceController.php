@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Workspace;
 use App\Models\Project;
+use App\Models\User;
+use App\Notifications\AccessShare;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
@@ -80,6 +82,76 @@ class WorkspaceController extends Controller
 
         return redirect()->route('workspaces.page')
             ->with('success', 'Workspace deleted successfully');
+    }
+
+    public function share(Request $request, Workspace $workspace)
+    {
+        if (!$workspace->isOwnedBy($request->user())) {
+            abort(403);
+        }
+
+        // Get current members
+        $members = $workspace->members()->withPivot('role')->get();
+        
+        // Load owner relationship
+        $workspace->load('owner');
+        
+        return view('workspaces.share', compact('workspace', 'members'));
+    }
+
+    public function invite(Request $request, Workspace $workspace)
+    {
+        if (!$workspace->isOwnedBy($request->user())) {
+            abort(403);
+        }
+
+        try {
+            $validated = $request->validate([
+                'email' => 'required|email|exists:users,email',
+                'role' => 'required|in:user,admin'
+            ]);
+
+            $user = User::where('email', $validated['email'])->first();
+            
+            // Check if user is already a member
+            if ($workspace->members()->where('user_id', $user->id)->exists()) {
+                return redirect()->back()
+                    ->withErrors(['email' => 'User is already a member of this workspace'])
+                    ->withInput();
+            }
+
+            // Add user to workspace
+            $workspace->members()->attach($user->id, ['role' => $validated['role']]);
+
+            // Send notification
+            $user->notify(new AccessShare($workspace, $request->user()));
+
+            return redirect()->route('workspaces.share', $workspace)
+                ->with('success', 'Member invited successfully');
+
+        } catch (ValidationException $e) {
+            return redirect()->back()
+                ->withErrors($e->errors())
+                ->withInput();
+        }
+    }
+
+    public function removeMember(Request $request, Workspace $workspace, User $user)
+    {
+        if (!$workspace->isOwnedBy($request->user())) {
+            abort(403);
+        }
+
+        // Prevent removing the owner
+        if ($workspace->owner_id === $user->id) {
+            abort(403, 'Cannot remove the workspace owner');
+        }
+
+        // Remove member
+        $workspace->members()->detach($user->id);
+
+        return redirect()->route('workspaces.share', $workspace)
+            ->with('success', 'Member removed successfully');
     }
 
     public function activityLog(Request $request)

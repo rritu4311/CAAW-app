@@ -7,6 +7,7 @@ use App\Http\Controllers\WorkareaController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\FolderController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ThemeController;
 use App\Models\Workspace;
 use App\Models\Project;
 use Illuminate\Support\Facades\Route;
@@ -41,6 +42,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/workspaces/{workspace}/edit', function (Workspace $workspace) {
         return view('workspaces.edit', ['workspace' => $workspace]);
     })->name('workspaces.edit');
+    Route::get('/workspaces/{workspace}/share', [WorkspaceController::class, 'share'])->name('workspaces.share');
+    Route::post('/workspaces/{workspace}/invite', [WorkspaceController::class, 'invite'])->name('workspaces.invite');
+    Route::delete('/workspaces/{workspace}/members/{user}', [WorkspaceController::class, 'removeMember'])->name('workspaces.remove-member');
     Route::post('/workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');
     Route::get('/workspaces/{workspace}', [WorkspaceController::class, 'show'])->name('workspaces.show');
     Route::put('/workspaces/{workspace}', [WorkspaceController::class, 'update'])->name('workspaces.update');
@@ -72,6 +76,13 @@ Route::middleware('auth')->group(function () {
     Route::patch('/notifications/{id}/mark-unread', [NotificationController::class, 'markAsUnread'])->name('notifications.mark-unread');
     Route::patch('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
+    Route::post('/notifications/{id}/approve', [NotificationController::class, 'approveInvitation'])->name('notifications.approve');
+    Route::post('/notifications/{id}/reject', [NotificationController::class, 'rejectInvitation'])->name('notifications.reject');
+    Route::post('/notifications/{id}/approve-workspace', [NotificationController::class, 'approveWorkspaceRequest'])->name('notifications.approve-workspace');
+    Route::post('/notifications/{id}/reject-workspace', [NotificationController::class, 'rejectWorkspaceRequest'])->name('notifications.reject-workspace');
+
+    // Theme toggle route
+    Route::post('/theme/toggle', [ThemeController::class, 'toggle'])->name('theme.toggle');
 
     //Opening for project
     Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');

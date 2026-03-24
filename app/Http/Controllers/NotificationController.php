@@ -108,4 +108,47 @@ class NotificationController extends Controller
 
         return response()->json(['count' => $count]);
     }
+
+    /**
+     * Approve a workspace invitation.
+     */
+    public function approveInvitation(Request $request, $id)
+    {
+        $notification = $request->user()
+            ->notifications()
+            ->findOrFail($id);
+
+        $workspaceId = $notification->data['workspace_id'] ?? null;
+        
+        if (!$workspaceId) {
+            return back()->with('error', 'Invalid invitation');
+        }
+
+        $workspace = \App\Models\Workspace::findOrFail($workspaceId);
+        
+        // Add user to workspace members
+        $workspace->members()->syncWithoutDetaching([
+            $request->user()->id => ['role' => 'user']
+        ]);
+
+        // Mark notification as read
+        $notification->markAsRead();
+
+        return back()->with('success', 'Invitation approved successfully');
+    }
+
+    /**
+     * Reject a workspace invitation.
+     */
+    public function rejectInvitation(Request $request, $id)
+    {
+        $notification = $request->user()
+            ->notifications()
+            ->findOrFail($id);
+
+        // Mark notification as read
+        $notification->markAsRead();
+
+        return back()->with('success', 'Invitation rejected');
+    }
 }

@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Responsive Header</title>
 
-<!-- Alpine.js -->
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
 <style>
 * {
@@ -211,17 +209,23 @@ header {
     </ul>
 
     <!-- Theme Toggle -->
-    <div class="menu-item" x-data="{ isDark: false }" x-init="isDark = document.documentElement.classList.contains('dark')">
-      <button @click="toggleTheme()" class="theme-toggle-btn" :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'">
-        <!-- Sun icon for light mode (shown when dark) -->
-        <svg x-show="isDark" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-        </svg>
-        <!-- Moon icon for dark mode (shown when light) -->
-        <svg x-show="!isDark" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-        </svg>
-      </button>
+    <div class="menu-item">
+      <form method="POST" action="{{ route('theme.toggle') }}" class="inline">
+        @csrf
+        <button type="submit" class="theme-toggle-btn" title="{{ session('theme') === 'dark' ? 'Switch to light mode' : 'Switch to dark mode' }}">
+          @if(session('theme') === 'dark')
+            <!-- Sun icon for light mode (shown when dark) -->
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            </svg>
+          @else
+            <!-- Moon icon for dark mode (shown when light) -->
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+            </svg>
+          @endif
+        </button>
+      </form>
     </div>
 
     <!-- Notifications -->
@@ -233,7 +237,10 @@ header {
 
       <div class="dropdown-menu">
         <a href="{{ route('profile.edit') }}">Profile</a>
-        <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
+        <form method="POST" action="{{ route('logout') }}" class="inline">
+          @csrf
+          <button type="submit" class="w-full text-left px-3 py-2 text-white hover:bg-gray-700 rounded">Logout</button>
+        </form>
       </div>
     </div>
 
@@ -241,82 +248,7 @@ header {
   </nav>
 </header>
 
-<!-- Logout Form -->
-<form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
-    @csrf
-</form>
 
-<script>
-const toggle = document.getElementById("menuToggle");
-const nav = document.getElementById("navLinks");
-const dropdown = document.getElementById("dropdown");
-const dropdownBtn = document.getElementById("dropdownBtn");
-
-// Initialize theme on page load
-document.addEventListener('DOMContentLoaded', () => {
-  const savedTheme = localStorage.getItem('theme');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  
-  if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-    document.documentElement.classList.add('dark');
-  }
-});
-
-// Mobile menu toggle
-toggle.addEventListener("click", () => {
-  nav.classList.toggle("active");
-});
-
-// Close menu after click (mobile UX)
-document.querySelectorAll(".nav-links a").forEach(link => {
-  link.addEventListener("click", () => {
-    nav.classList.remove("active");
-  });
-});
-
-// Close menu when clicking outside (mobile UX)
-document.addEventListener("click", (e) => {
-  if (!nav.contains(e.target) && !toggle.contains(e.target)) {
-    nav.classList.remove("active");
-  }
-});
-
-// Dropdown toggle
-dropdownBtn.addEventListener("click", (e) => {
-  e.preventDefault();
-  dropdown.classList.toggle("active");
-});
-
-// Close dropdown when clicking outside
-document.addEventListener("click", (e) => {
-  if (!dropdown.contains(e.target)) {
-    dropdown.classList.remove("active");
-  }
-});
-
-// Theme toggle function
-function toggleTheme() {
-  const html = document.documentElement;
-  const isDark = html.classList.contains('dark');
-  
-  if (isDark) {
-    html.classList.remove('dark');
-    localStorage.setItem('theme', 'light');
-  } else {
-    html.classList.add('dark');
-    localStorage.setItem('theme', 'dark');
-  }
-  
-  // Update Alpine.js data
-  const themeElement = document.querySelector('[x-data*="theme"]');
-  if (themeElement && themeElement._x_dataStack) {
-    const alpineData = themeElement._x_dataStack[themeElement._x_dataStack.length - 1];
-    if (alpineData && alpineData.isDark !== undefined) {
-      alpineData.isDark = !isDark;
-    }
-  }
-}
-</script>
 
 </body>
 </html>

@@ -8,20 +8,18 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class AccessShare extends Notification
+class WorkspaceRequestApproved extends Notification
 {
     use Queueable;
 
     public $workspace;
-    public $inviter;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(Workspace $workspace, $inviter = null)
+    public function __construct(Workspace $workspace)
     {
         $this->workspace = $workspace;
-        $this->inviter = $inviter;
     }
 
     /**
@@ -40,12 +38,12 @@ class AccessShare extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('You\'ve been invited to join a workspace!')
-            ->greeting('Hello ' . $notifiable->name . '!')
-            ->line('You have been invited to join the workspace: **' . $this->workspace->name . '**')
-            ->line($this->inviter ? 'Invited by: ' . $this->inviter->name : '')
-            ->action('View Workspace', route('workspace.page', $this->workspace))
-            ->line('Thank you for using our application!');
+            ->subject('Workspace Request Approved!')
+            ->greeting('Great news ' . $notifiable->name . '!')
+            ->line('Your workspace request has been approved.')
+            ->line('Workspace Name: **' . $this->workspace->name . '**')
+            ->action('View Workspace', route('workspaces.show', $this->workspace))
+            ->line('You can now start using your workspace.');
     }
 
     /**
@@ -58,8 +56,8 @@ class AccessShare extends Notification
         return [
             'workspace_id' => $this->workspace->id,
             'workspace_name' => $this->workspace->name,
-            'inviter_name' => $this->inviter?->name,
-            'message' => 'You have been invited to join the workspace: ' . $this->workspace->name,
+            'message' => 'Your workspace request "' . $this->workspace->name . '" has been approved!',
+            'type' => 'workspace_request_approved',
         ];
     }
 }
