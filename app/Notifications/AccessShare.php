@@ -14,14 +14,16 @@ class AccessShare extends Notification
 
     public $workspace;
     public $inviter;
+    public $status;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(Workspace $workspace, $inviter = null)
+    public function __construct(Workspace $workspace, $inviter = null, $status = 'approved')
     {
         $this->workspace = $workspace;
         $this->inviter = $inviter;
+        $this->status = $status;
     }
 
     /**
@@ -39,12 +41,23 @@ class AccessShare extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
+        $subject = 'Workspace Invitation Sent - Awaiting Approval';
+            
+        $greeting = 'Hello ' . $notifiable->name . '!';
+        
+
+            $message = 'An invitation has been sent for you to join the workspace: **' . $this->workspace->name . '**';
+            $message .= '\n\nThe invitation is currently awaiting approval from the workspace owner.';
+            $message .= '\n\nYou will be notified once the approval is processed.';
+            $actionText = 'View Notifications';
+            $actionUrl = route('notifications.index');
+        
         return (new MailMessage)
-            ->subject('You\'ve been invited to join a workspace!')
-            ->greeting('Hello ' . $notifiable->name . '!')
-            ->line('You have been invited to join the workspace: **' . $this->workspace->name . '**')
+            ->subject($subject)
+            ->greeting($greeting)
+            ->line($message)
             ->line($this->inviter ? 'Invited by: ' . $this->inviter->name : '')
-            ->action('View Workspace', route('workspace.page', $this->workspace))
+            ->action($actionText, $actionUrl)
             ->line('Thank you for using our application!');
     }
 
@@ -55,11 +68,16 @@ class AccessShare extends Notification
      */
     public function toArray(object $notifiable): array
     {
+        $message = 'An invitation has been sent for you to join the workspace: ' . $this->workspace->name . ' (Awaiting approval)';
+        
+            
         return [
             'workspace_id' => $this->workspace->id,
             'workspace_name' => $this->workspace->name,
             'inviter_name' => $this->inviter?->name,
-            'message' => 'You have been invited to join the workspace: ' . $this->workspace->name,
+            'status' => $this->status,
+            'message' => $message,
+            'type' => $this->status === 'pending' ? 'workspace_invitation_pending' : 'workspace_invitation',
         ];
     }
 }

@@ -8,6 +8,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\FolderController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ThemeController;
+use App\Http\Controllers\AssetPreviewController;
 use App\Models\Workspace;
 use App\Models\Project;
 use Illuminate\Support\Facades\Route;
@@ -69,6 +70,26 @@ Route::middleware('auth')->group(function () {
     // Activity Log route
     Route::get('/activity-log', [WorkspaceController::class, 'activityLog'])->name('activity.log');
 
+    // Debug route to check workspace users status
+    Route::get('/debug/workspace-users/{workspace}', function (Workspace $workspace) {
+        $workspaceUsers = \App\Models\WorkspaceUser::where('workspace_id', $workspace->id)
+            ->with('user')
+            ->get()
+            ->map(function ($wu) {
+                return [
+                    'id' => $wu->id,
+                    'user_name' => $wu->user->name,
+                    'user_email' => $wu->user->email,
+                    'role' => $wu->role,
+                    'status' => $wu->status,
+                    'created_at' => $wu->created_at,
+                    'updated_at' => $wu->updated_at,
+                ];
+            });
+        
+        return response()->json($workspaceUsers);
+    })->name('debug.workspace-users');
+
     // Notification routes
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/recent', [NotificationController::class, 'recent'])->name('notifications.recent');
@@ -86,6 +107,11 @@ Route::middleware('auth')->group(function () {
 
     //Opening for project
     Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
+
+    // Asset preview routes
+    Route::get('/assets/{asset}/preview', [AssetPreviewController::class, 'preview'])->name('assets.preview');
+    Route::get('/assets/{asset}/thumbnail/{size?}', [AssetPreviewController::class, 'thumbnail'])->name('assets.thumbnail');
+    Route::get('/assets/{asset}/metadata', [AssetPreviewController::class, 'metadata'])->name('assets.metadata');
 });
 
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Workspace;
 use App\Models\Project;
 use App\Models\User;
+use App\Models\WorkspaceUser;
 use App\Notifications\AccessShare;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -14,7 +15,11 @@ class WorkspaceController extends Controller
 {
     public function index(Request $request)
     {
-        $workspaces = $request->user()->workspaces()->get();
+        // Get workspaces where user has approved access (including owned workspaces)
+        $workspaces = Workspace::whereHas('workspaceUsers', function ($query) use ($request) {
+            $query->where('user_id', $request->user()->id)
+                  ->where('status', 'approved');
+        })->orWhere('owner_id', $request->user()->id)->get();
         
         return view('workspaces.index', compact('workspaces'));
     }
@@ -28,7 +33,14 @@ class WorkspaceController extends Controller
 
             $validated['owner_id'] = $request->user()->id;
             $workspace = Workspace::create($validated);
-            $workspace->members()->attach($request->user()->id, ['role' => 'owner']);
+            
+            // Create WorkspaceUser record with approved status for owner
+            WorkspaceUser::create([
+                'workspace_id' => $workspace->id,
+                'user_id' => $request->user()->id,
+                'role' => 'owner',
+                'status' => 'approved'
+            ]);
 
             return redirect()->route('workspaces.page')
                 ->with('success', 'Workspace created successfully');
@@ -42,8 +54,19 @@ class WorkspaceController extends Controller
 
     public function show(Request $request, Workspace $workspace)
     {
-        if (!$workspace->isOwnedBy($request->user())) {
-            abort(403);
+        // Allow access if user is the owner
+        if ($workspace->isOwnedBy($request->user())) {
+            return view('workspace.index', compact('workspace'));
+        }
+        
+        // Check if user has approved access
+        $hasAccess = WorkspaceUser::where('workspace_id', $workspace->id)
+            ->where('user_id', $request->user()->id)
+            ->where('status', 'approved')
+            ->exists();
+            
+        if (!$hasAccess) {
+            abort(403, 'You do not have access to this workspace');
         }
 
         return view('workspace.index', compact('workspace'));
@@ -90,13 +113,28 @@ class WorkspaceController extends Controller
             abort(403);
         }
 
-        // Get current members
-        $members = $workspace->members()->withPivot('role')->get();
+        // Get current approved members from WorkspaceUser table
+        $approvedMembers = WorkspaceUser::where('workspace_id', $workspace->id)
+            ->where('status', 'approved')
+            ->with('user')
+            ->get();
+        
+        // Get pending workspace user requests
+        $pendingRequests = WorkspaceUser::where('workspace_id', $workspace->id)
+            ->where('status', 'pending')
+            ->with('user')
+            ->get();
+        
+        // Get rejected workspace user requests
+        $rejectedRequests = WorkspaceUser::where('workspace_id', $workspace->id)
+            ->where('status', 'rejected')
+            ->with('user')
+            ->get();
         
         // Load owner relationship
         $workspace->load('owner');
         
-        return view('workspaces.share', compact('workspace', 'members'));
+        return view('workspaces.share', compact('workspace', 'approvedMembers', 'pendingRequests', 'rejectedRequests'));
     }
 
     public function invite(Request $request, Workspace $workspace)
@@ -108,26 +146,61 @@ class WorkspaceController extends Controller
         try {
             $validated = $request->validate([
                 'email' => 'required|email|exists:users,email',
-                'role' => 'required|in:user,admin'
+                'role' => 'required|in:member,admin'
             ]);
 
-            $user = User::where('email', $validated['email'])->first();
-            
-            // Check if user is already a member
-            if ($workspace->members()->where('user_id', $user->id)->exists()) {
+            $user = User::where('email', $validated['email'])->first();            
+            // Check if user is already a member (approved)
+            $existingMembership = WorkspaceUser::where('workspace_id', $workspace->id)
+                ->where('user_id', $user->id)
+                ->where('status', 'approved')
+                ->first();
+
+            if ($existingMembership) {
                 return redirect()->back()
                     ->withErrors(['email' => 'User is already a member of this workspace'])
                     ->withInput();
             }
 
-            // Add user to workspace
-            $workspace->members()->attach($user->id, ['role' => $validated['role']]);
+            // Check if there's already a pending request
+            $existingPendingRequest = WorkspaceUser::where('workspace_id', $workspace->id)
+                ->where('user_id', $user->id)
+                ->where('status', 'pending')
+                ->first();
 
-            // Send notification
-            $user->notify(new AccessShare($workspace, $request->user()));
+            if ($existingPendingRequest) {
+                return redirect()->back()
+                    ->withErrors(['email' => 'A pending invitation already exists for this user'])
+                    ->withInput();
+            }
+            // Create workspace user record with pending status
+            $workspaceUser = WorkspaceUser::create([
+                'workspace_id' => $workspace->id,
+                'user_id' => $user->id,
+                'role' => $validated['role'],
+                'status' => 'pending'
+            ]);
+
+            // Check if there are any existing pending requests for this workspace-user combination
+            // to avoid duplicate notifications
+            $existingNotifications = $user->notifications()
+                ->where('type', AccessShare::class)
+                ->where('data->workspace_id', $workspace->id)
+                ->where('data->status', 'pending')
+                ->whereNull('read_at')
+                ->exists();
+
+            // Only send notification if no existing pending notification exists
+            if (!$existingNotifications) {
+                // Send notification to the invited user that invitation has been sent
+                $user->notify(new AccessShare($workspace, $request->user(), 'pending'));
+                
+                // Send notification to workspace owner about the pending request
+                $workspace->owner->notify(new \App\Notifications\WorkspaceRequestPending($workspaceUser, $user));
+            }
 
             return redirect()->route('workspaces.share', $workspace)
-                ->with('success', 'Member invited successfully');
+                ->with('success', 'Invitation sent successfully. The user can now access the workspace.');
 
         } catch (ValidationException $e) {
             return redirect()->back()
@@ -147,8 +220,10 @@ class WorkspaceController extends Controller
             abort(403, 'Cannot remove the workspace owner');
         }
 
-        // Remove member
-        $workspace->members()->detach($user->id);
+        // Remove all workspace user records for this user (both approved and pending)
+        WorkspaceUser::where('workspace_id', $workspace->id)
+            ->where('user_id', $user->id)
+            ->delete();
 
         return redirect()->route('workspaces.share', $workspace)
             ->with('success', 'Member removed successfully');

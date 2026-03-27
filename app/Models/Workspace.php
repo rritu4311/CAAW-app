@@ -34,6 +34,11 @@ class Workspace extends Model
             ->withTimestamps();
     }
 
+    public function workspaceUsers(): HasMany
+    {
+        return $this->hasMany(WorkspaceUser::class);
+    }
+
     public function isOwnedBy(User $user): bool
     {
         return $this->owner_id === $user->id;

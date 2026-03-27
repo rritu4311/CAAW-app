@@ -14,6 +14,7 @@ class WorkspaceUser extends Model
         'workspace_id',
         'user_id',
         'role',
+        'status',
     ];
 
     /**
@@ -54,5 +55,13 @@ class WorkspaceUser extends Model
     public function isUser(): bool
     {
         return $this->role === 'user';
+    }
+
+    /**
+     * Check if the user is a workspace member.
+     */
+    public function isMember(): bool
+    {
+        return $this->role === 'member';
     }
 }

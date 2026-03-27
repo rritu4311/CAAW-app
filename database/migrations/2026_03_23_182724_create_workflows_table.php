@@ -10,18 +10,19 @@ return new class extends Migration
     {
         Schema::create('workflows', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('project_id');
             $table->string('name');
-            $table->text('description')->nullable();
-            $table->boolean('is_sequential')->default(true); // sequential or parallel approval
-            $table->unsignedBigInteger('created_by');
+            $table->json('definition');
             $table->timestamps();
 
-            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('project_id')->references('id')->on('projects')->onDelete('cascade');
         });
     }
 
     public function down(): void
     {
+        Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('workflows');
+        Schema::enableForeignKeyConstraints();
     }
 };

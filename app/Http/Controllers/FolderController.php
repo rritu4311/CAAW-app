@@ -58,16 +58,16 @@ class FolderController extends Controller
             $files = $assets->map(function ($asset) {
                 return [
                     'id' => $asset->id,
-                    'name' => $asset->name,
+                    'name' => $asset->original_name ?? $asset->name,
                     'file_path' => $asset->file_path,
                     'file_type' => $asset->file_type,
                     'file_size' => $asset->file_size,
                     'path' => $asset->file_path,
                     'url' => Storage::url($asset->file_path),
-                    'is_image' => $asset->file_type === 'image',
-                    'is_video' => $asset->file_type === 'video',
-                    'is_document' => in_array($asset->file_type, ['pdf', 'doc']),
-                    'is_text' => $asset->file_type === 'text',
+                    'is_image' => $asset->isImage(),
+                    'is_video' => $asset->isVideo(),
+                    'is_document' => $asset->isDocument(),
+                    'is_text' => $asset->isText(),
                     'formatted_size' => $asset->formatted_size,
                     'created_at' => $asset->created_at->format('Y-m-d H:i:s'),
                 ];
