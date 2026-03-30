@@ -35,9 +35,14 @@ class Project extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
     public function isOwnedBy(User $user): bool
     {
-        return $this->workspace->owner_id === $user->id;
+        return $this->created_by === $user->id;
     }
 
     public function folders()
@@ -48,6 +53,11 @@ class Project extends Model
     public function assets(): HasMany
     {
         return $this->hasMany(Asset::class);
+    }
+
+    public function projectCollaborators(): HasMany
+    {
+        return $this->hasMany(ProjectCollaborator::class);
     }
 
     public function pendingApprovalsCount(): int

@@ -15,11 +15,21 @@
                             <h1 class="text-3xl font-bold mb-4">{{ $project->name }}</h1>
                         </div>
                         
-                        <!-- Create Root Folder Button -->
-                        <button onclick="openModal('createFolderModalroot')" 
-                                class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
-                            Create Folder
-                        </button>
+                        <!-- Action Buttons -->
+                        <div class="flex gap-3">
+                            @if($project->isOwnedBy(auth()->user()))
+                                <a href="{{ route('projects.share', $project) }}" 
+                                   class="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"/>
+                                    </svg>
+                                </a>
+                            @endif
+                            <button onclick="openModal('createFolderModalroot')" 
+                                    class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                                Create Folder
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Project Details -->

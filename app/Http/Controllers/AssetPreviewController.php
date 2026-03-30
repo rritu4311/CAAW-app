@@ -339,17 +339,22 @@ class AssetPreviewController extends Controller
         [$width, $height] = $sizes[$size] ?? $sizes['medium'];
         
         // Create a better video placeholder SVG
+        $centerX = $width / 2 - 20;
+        $centerY = $height / 2 - 20;
+        $textX = $width / 2;
+        $textY = $height - 20;
+        
         $svg = <<<SVG
 <svg width="{$width}" height="{$height}" xmlns="http://www.w3.org/2000/svg">
     <rect width="{$width}" height="{$height}" fill="#dbeafe"/>
     <rect width="{$width}" height="{$height}" fill="none" stroke="#3b82f6" stroke-width="2"/>
-    <g transform="translate({$width/2 - 20}, {$height/2 - 20})" fill="#3b82f6">
+    <g transform="translate({$centerX}, {$centerY})" fill="#3b82f6">
         <circle cx="20" cy="20" r="16" opacity="0.2"/>
         <circle cx="20" cy="20" r="16" fill="none" stroke="#3b82f6" stroke-width="2"/>
         <path d="M16 12a6 6 0 018.485 0l3.536 3.536a6 6 0 010 8.485l-3.536 3.536a6 6 0 01-8.485 0l-3.536-3.536a6 6 0 010-8.485l3.536-3.536z"/>
         <path d="M18 20l4-4m0 0l-4-4m4 4h-8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </g>
-    <text x="{$width/2}" y="{$height - 20}" text-anchor="middle" fill="#1e40af" font-family="Arial" font-size="14">Video</text>
+    <text x="{$textX}" y="{$textY}" text-anchor="middle" fill="#1e40af" font-family="Arial" font-size="14">Video</text>
 </svg>
 SVG;
         
@@ -374,23 +379,36 @@ SVG;
             [$width, $height] = $sizes[$size] ?? $sizes['medium'];
             
             // Create a PDF-like placeholder
+            $docCenterX = $width / 2 - 20;
+            $docCenterY = $height / 2 - 40;
+            $lineStartY = $height / 2 + 20;
+            $lineY2 = $lineStartY + 10;
+            $lineY3 = $lineStartY + 20;
+            $lineY4 = $lineStartY + 30;
+            $textX = $width / 2;
+            $textY = $height - 20;
+            $rectWidth1 = $width - 40;
+            $rectWidth2 = $width - 60;
+            $rectWidth3 = $width - 50;
+            $rectWidth4 = $width - 70;
+            
             $svg = <<<SVG
 <svg width="{$width}" height="{$height}" xmlns="http://www.w3.org/2000/svg">
     <rect width="{$width}" height="{$height}" fill="#fee2e2"/>
     <rect width="{$width}" height="{$height}" fill="none" stroke="#ef4444" stroke-width="2"/>
-    <g transform="translate({$width/2 - 20}, {$height/2 - 40})" fill="#ef4444">
+    <g transform="translate({$docCenterX}, {$docCenterY})" fill="#ef4444">
         <rect x="0" y="0" width="40" height="50" rx="2" opacity="0.2"/>
         <rect x="0" y="0" width="40" height="50" rx="2" fill="none" stroke="#ef4444" stroke-width="2"/>
         <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
     </g>
     <!-- Document lines -->
     <g opacity="0.3">
-        <rect x="20" y="{$height/2 + 20}" width="{$width - 40}" height="2" fill="#991b1b"/>
-        <rect x="20" y="{$height/2 + 30}" width="{$width - 60}" height="2" fill="#991b1b"/>
-        <rect x="20" y="{$height/2 + 40}" width="{$width - 50}" height="2" fill="#991b1b"/>
-        <rect x="20" y="{$height/2 + 50}" width="{$width - 70}" height="2" fill="#991b1b"/>
+        <rect x="20" y="{$lineStartY}" width="{$rectWidth1}" height="2" fill="#991b1b"/>
+        <rect x="20" y="{$lineY2}" width="{$rectWidth2}" height="2" fill="#991b1b"/>
+        <rect x="20" y="{$lineY3}" width="{$rectWidth3}" height="2" fill="#991b1b"/>
+        <rect x="20" y="{$lineY4}" width="{$rectWidth4}" height="2" fill="#991b1b"/>
     </g>
-    <text x="{$width/2}" y="{$height - 20}" text-anchor="middle" fill="#991b1b" font-family="Arial" font-size="14">PDF Document</text>
+    <text x="{$textX}" y="{$textY}" text-anchor="middle" fill="#991b1b" font-family="Arial" font-size="14">PDF Document</text>
 </svg>
 SVG;
             
@@ -449,11 +467,15 @@ SVG;
         
         $icon = $icons[$type] ?? $icons['generic'];
         
+        // Calculate center position
+        $centerX = $width / 2 - 12;
+        $centerY = $height / 2 - 12;
+        
         return <<<SVG
 <svg width="{$width}" height="{$height}" xmlns="http://www.w3.org/2000/svg">
     <rect width="{$width}" height="{$height}" fill="{$color}" opacity="0.1"/>
     <rect width="{$width}" height="{$height}" fill="none" stroke="{$color}" stroke-width="2"/>
-    <g transform="translate({$width/2 - 12}, {$height/2 - 12})" fill="{$color}">
+    <g transform="translate({$centerX}, {$centerY})" fill="{$color}">
         {$icon}
     </g>
 </svg>

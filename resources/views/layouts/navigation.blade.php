@@ -206,6 +206,14 @@ header {
         <a href="{{ route('activity.log') }}">Activity Log</a>
       </li>
 
+      <li>
+        <a href="{{ route('workspaces.share-index') }}">Share Workspace</a>
+      </li>
+
+      <li>
+        <a href="{{ route('projects.share-index') }}">Share Project</a>
+      </li>
+
     </ul>
 
     <!-- Theme Toggle -->
@@ -247,6 +255,31 @@ header {
     <div class="menu-toggle" id="menuToggle">&#9776;</div>
   </nav>
 </header>
+
+<script>
+// Existing dropdown functionality
+const dropdown = document.getElementById('dropdown');
+const dropdownBtn = document.getElementById('dropdownBtn');
+const navLinks = document.getElementById('navLinks');
+const menuToggle = document.getElementById('menuToggle');
+
+dropdownBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  dropdown.classList.toggle('active');
+});
+
+// Mobile menu toggle
+menuToggle.addEventListener('click', () => {
+  navLinks.classList.toggle('active');
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  if (!dropdown.contains(e.target)) {
+    dropdown.classList.remove('active');
+  }
+});
+</script>
 
 
 

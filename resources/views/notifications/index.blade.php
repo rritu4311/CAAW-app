@@ -87,24 +87,69 @@
                                         <div class="flex items-center space-x-3">
                                             @if(is_null($notification->approve_at) && is_null($notification->sent_at))
                                                 <div class="flex space-x-2" id="buttons-{{ $notification->id }}">
-                                                    <form method="POST" action="{{ route('notifications.approve', $notification->id) }}" class="inline">
-                                                        @csrf
-                                                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md">
-                                                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                                            </svg>
-                                                            Approve
-                                                        </button>
-                                                    </form>
-                                                    <form method="POST" action="{{ route('notifications.reject', $notification->id) }}" class="inline">
-                                                        @csrf
-                                                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-all duration-200 shadow-sm hover:shadow-md">
-                                                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                                            </svg>
-                                                            Reject
-                                                        </button>
-                                                    </form>
+                                                    @if($notification->data['type'] === 'project_request')
+                                                        {{-- Only show approve/reject for project owner notifications --}}
+                                                        <form method="POST" action="{{ route('notifications.approve-project', $notification->data['project_collaborator_id']) }}" class="inline">
+                                                            @csrf
+                                                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md">
+                                                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                                </svg>
+                                                                Approve
+                                                            </button>
+                                                        </form>
+                                                        <form method="POST" action="{{ route('notifications.reject-project', $notification->data['project_collaborator_id']) }}" class="inline">
+                                                            @csrf
+                                                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-all duration-200 shadow-sm hover:shadow-md">
+                                                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                                </svg>
+                                                                Reject
+                                                            </button>
+                                                        </form>
+                                                    @elseif($notification->data['type'] === 'project_invitation_pending')
+                                                        {{-- Show accept/decline for invited users --}}
+                                                        <form method="POST" action="{{ route('projects.accept-invitation', $notification->data['project_id']) }}" class="inline">
+                                                            @csrf
+                                                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md">
+                                                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                                </svg>
+                                                                Accept
+                                                            </button>
+                                                        </form>
+                                                        <form method="POST" action="{{ route('projects.decline-invitation', $notification->id) }}" class="inline">
+                                                            @csrf
+                                                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-all duration-200 shadow-sm hover:shadow-md">
+                                                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                                </svg>
+                                                                Decline
+                                                            </button>
+                                                        </form>
+                                                    @elseif($notification->data['type'] === 'workspace_request')
+                                                        <form method="POST" action="{{ route('notifications.approve-workspace', $notification->data['workspace_user_id']) }}" class="inline">
+                                                            @csrf
+                                                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md">
+                                                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                                </svg>
+                                                                Approve
+                                                            </button>
+                                                        </form>
+                                                        <form method="POST" action="{{ route('notifications.reject-workspace', $notification->data['workspace_user_id']) }}" class="inline">
+                                                            @csrf
+                                                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-all duration-200 shadow-sm hover:shadow-md">
+                                                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                                </svg>
+                                                                Reject
+                                                            </button>
+                                                        </form>
+                                                    @else
+                                                        {{-- For other notification types, don't show approve/reject buttons --}}
+                                                        <span class="text-sm text-gray-500 dark:text-gray-400">No actions available</span>
+                                                    @endif
                                                 </div>
                                             @elseif(!is_null($notification->approve_at))
                                                 <div class="flex items-center space-x-2">

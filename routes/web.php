@@ -37,6 +37,7 @@ Route::middleware('auth')->group(function () {
     // Workspace management routes
     Route::get('/workspaces', [WorkspaceController::class, 'index'])->name('workspaces.index');
     Route::get('/workspaces-page', [WorkspaceController::class, 'index'])->name('workspaces.page');
+    Route::get('/workspaces/share-index', [WorkspaceController::class, 'shareIndex'])->name('workspaces.share-index');
     Route::get('/workspaces/create', function () {
         return view('workspaces.create');
     })->name('workspaces.create');
@@ -101,12 +102,20 @@ Route::middleware('auth')->group(function () {
     Route::post('/notifications/{id}/reject', [NotificationController::class, 'rejectInvitation'])->name('notifications.reject');
     Route::post('/notifications/{id}/approve-workspace', [NotificationController::class, 'approveWorkspaceRequest'])->name('notifications.approve-workspace');
     Route::post('/notifications/{id}/reject-workspace', [NotificationController::class, 'rejectWorkspaceRequest'])->name('notifications.reject-workspace');
+    Route::post('/notifications/{id}/approve-project', [NotificationController::class, 'approveProjectRequest'])->name('notifications.approve-project');
+    Route::post('/notifications/{id}/reject-project', [NotificationController::class, 'rejectProjectRequest'])->name('notifications.reject-project');
 
     // Theme toggle route
     Route::post('/theme/toggle', [ThemeController::class, 'toggle'])->name('theme.toggle');
 
     //Opening for project
+    Route::get('/projects/share-index', [ProjectController::class, 'shareIndex'])->name('projects.share-index');
     Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
+    Route::get('/projects/{project}/share', [ProjectController::class, 'share'])->name('projects.share');
+    Route::post('/projects/{project}/invite', [ProjectController::class, 'invite'])->name('projects.invite');
+    Route::delete('/projects/{project}/members/{user}', [ProjectController::class, 'removeMember'])->name('projects.remove-member');
+    Route::post('/projects/{project}/accept-invitation', [ProjectController::class, 'acceptInvitation'])->name('projects.accept-invitation');
+    Route::post('/projects/decline-invitation/{notificationId}', [ProjectController::class, 'declineInvitation'])->name('projects.decline-invitation');
 
     // Asset preview routes
     Route::get('/assets/{asset}/preview', [AssetPreviewController::class, 'preview'])->name('assets.preview');

@@ -14,6 +14,7 @@ class ProjectCollaborator extends Model
         'project_id',
         'user_id',
         'role',
+        'status',
         'invited_at',
         'approved_at',
     ];
@@ -44,7 +45,23 @@ class ProjectCollaborator extends Model
      */
     public function isApproved(): bool
     {
-        return !is_null($this->approved_at);
+        return $this->status === 'approved';
+    }
+
+    /**
+     * Check if the collaboration is pending.
+     */
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+
+    /**
+     * Check if the collaboration has been rejected.
+     */
+    public function isRejected(): bool
+    {
+        return $this->status === 'rejected';
     }
 
     /**

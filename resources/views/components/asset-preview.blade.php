@@ -4,7 +4,7 @@
     
     <!-- Modal -->
     <div class="fixed inset-0 flex items-center justify-center p-4">
-        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden"
+        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-7xl w-full max-h-[95vh] overflow-hidden"
              onclick="event.stopPropagation()">
             
             <!-- Header -->
@@ -29,7 +29,7 @@
             </div>
             
             <!-- Content -->
-            <div id="previewContent" class="p-4 overflow-auto" style="max-height: calc(90vh - 120px);">
+            <div id="previewContent" class="p-4 overflow-auto" style="max-height: calc(95vh - 120px);">
                 <!-- Content will be dynamically loaded here -->
             </div>
         </div>
@@ -41,7 +41,12 @@ let currentAsset = null;
 let cropper = null;
 
 function openAssetPreview(assetId) {
+    console.log('Opening asset preview for ID:', assetId);
     const modal = document.getElementById('assetPreviewModal');
+    if (!modal) {
+        console.error('Modal not found!');
+        return;
+    }
     modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
     loadAsset(assetId);
@@ -53,6 +58,12 @@ function closeAssetPreview() {
     document.body.style.overflow = '';
     currentAsset = null;
     
+    // Cleanup canvas preview
+    if (canvasImagePreview) {
+        canvasImagePreview.destroy();
+        canvasImagePreview = null;
+    }
+    
     // Destroy cropper if it exists
     if (cropper) {
         cropper.destroy();
@@ -61,19 +72,29 @@ function closeAssetPreview() {
 }
 
 async function loadAsset(assetId) {
+    console.log('Loading asset data for ID:', assetId);
     try {
         const response = await fetch(`/assets/${assetId}/metadata`);
+        console.log('Fetch response:', response);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const asset = await response.json();
+        console.log('Asset data received:', asset);
         
         currentAsset = {
             ...asset,
             url: `/assets/${assetId}/preview`
         };
         
+        console.log('Current asset set to:', currentAsset);
         updatePreviewHeader();
         updatePreviewContent();
     } catch (error) {
         console.error('Error loading asset:', error);
+        console.error('Error details:', error.message);
         closeAssetPreview();
     }
 }
@@ -98,22 +119,47 @@ function updatePreviewHeader() {
 }
 
 function updatePreviewContent() {
+    console.log('Updating preview content for asset type:', currentAsset?.type);
     const content = document.getElementById('previewContent');
+    
+    if (!content) {
+        console.error('Preview content element not found!');
+        return;
+    }
+    
+    // Cleanup previous canvas preview
+    if (canvasImagePreview) {
+        console.log('Cleaning up previous canvas preview');
+        canvasImagePreview.destroy();
+        canvasImagePreview = null;
+    }
+    
+    if (!currentAsset) {
+        console.error('No current asset to display!');
+        return;
+    }
     
     switch (currentAsset.type) {
         case 'image':
+            console.log('Setting up image preview for:', currentAsset);
             content.innerHTML = getImagePreview();
+            // Don't auto-initialize canvas - let user test it manually
+            console.log('Image preview HTML set up. Canvas will be initialized when user clicks test button.');
             break;
         case 'video':
+            console.log('Setting up video preview');
             content.innerHTML = getVideoPreview();
             break;
         case 'document':
+            console.log('Setting up document preview');
             content.innerHTML = currentAsset.mime_type === 'application/pdf' ? getPdfPreview() : getDocumentPreview();
             break;
         case 'text':
+            console.log('Setting up text preview');
             content.innerHTML = getTextPreview();
             break;
         default:
+            console.log('Setting up generic preview');
             content.innerHTML = getGenericPreview();
     }
 }
@@ -121,73 +167,134 @@ function updatePreviewContent() {
 function getImagePreview() {
     return `
         <div class="space-y-4">
-            <div class="relative">
-                <img id="cropImage" src="${currentAsset.url}" alt="${currentAsset.name}" 
-                     class="w-full h-auto rounded-lg shadow-lg">
-                <div class="absolute top-4 right-4 flex space-x-2">
-                    <button onclick="toggleCrop()" class="bg-white dark:bg-gray-800 rounded-lg p-2 shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Crop Image">
-                        <svg class="w-5 h-5 text-gray-700 dark:text-gray-300 transition-all duration-200 hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5">
-                            </path>
-                        </svg>
-                    </button>
-                    <button onclick="downloadAsset()" class="bg-white dark:bg-gray-800 rounded-lg p-2 shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Download">
-                        <svg class="w-5 h-5 text-gray-700 dark:text-gray-300 transition-transform duration-200 hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4">
-                            </path>
-                        </svg>
-                    </button>
-                </div>
+            <!-- Debug Info -->
+            <div class="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg">
+                <p class="font-semibold">Debug Info:</p>
+                <p>Asset URL: ${currentAsset.url}</p>
+                <p>Asset Type: ${currentAsset.type}</p>
+                <p>Asset Name: ${currentAsset.name}</p>
             </div>
-            <div id="cropInterface" style="display: none;" class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Crop Image</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Aspect Ratio</label>
-                        <select id="aspectRatio" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-600 dark:text-white">
-                            <option value="free">Free</option>
-                            <option value="1">1:1 (Square)</option>
-                            <option value="1.333">4:3</option>
-                            <option value="1.777">16:9</option>
-                            <option value="0.75">3:4</option>
-                            <option value="0.562">9:16</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Quality</label>
-                        <select id="cropQuality" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-600 dark:text-white">
-                            <option value="0.9">High (90%)</option>
-                            <option value="0.8" selected>Medium (80%)</option>
-                            <option value="0.6">Low (60%)</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="mb-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Width (px)</label>
-                            <input type="number" id="cropWidth" placeholder="Auto" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-600 dark:text-white">
+            
+            <!-- Social Media Style Card -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+                <!-- Header -->
+                <div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"></path>
+                                <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"></path>
+                            </svg>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Height (px)</label>
-                            <input type="number" id="cropHeight" placeholder="Auto" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-600 dark:text-white">
+                            <h3 class="font-semibold text-gray-900 dark:text-white">Image Preview</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">${new Date().toLocaleTimeString()}</p>
+                        </div>
+                    </div>
+                    <button onclick="closeAssetPreview()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Canvas Container -->
+                <div class="relative bg-gray-50 dark:bg-gray-900" style="height: 700px;">
+                    <!-- Fallback Image for Testing -->
+                    <img id="fallbackImage" src="${currentAsset.url}" alt="${currentAsset.name}" 
+                         class="w-full h-full object-contain" 
+                         style="display: block;"
+                         onload="console.log('Fallback image loaded successfully')"
+                         onerror="console.error('Fallback image failed to load'); this.style.display='none'; document.getElementById('canvasContainer').style.display='block';">
+                    
+                    <!-- Canvas Container (Hidden initially) -->
+                    <div id="canvasContainer" style="display: none; position: absolute; inset: 0;">
+                        <canvas id="previewCanvas" class="w-full h-full cursor-move"></canvas>
+                        
+                        <!-- Loading State -->
+                        <div id="canvasLoading" class="absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                            <div class="text-center">
+                                <div class="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3"></div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Loading image...</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Controls Overlay -->
+                        <div class="absolute top-4 right-4 flex flex-col space-y-2">
+                            <!-- Test Canvas Button -->
+                            <button onclick="testCanvas()" class="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Test Canvas">
+                                <svg class="w-4 h-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                </svg>
+                            </button>
+                            
+                            <!-- Zoom Controls -->
+                            <div class="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg p-1 flex flex-col space-y-1">
+                                <button onclick="zoomIn()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="Zoom In">
+                                    <svg class="w-4 h-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"></path>
+                                    </svg>
+                                </button>
+                                <button onclick="zoomOut()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="Zoom Out">
+                                    <svg class="w-4 h-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"></path>
+                                    </svg>
+                                </button>
+                                <button onclick="resetZoom()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="Reset Zoom">
+                                    <svg class="w-4 h-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Zoom Indicator -->
+                        <div class="absolute bottom-4 left-4 bg-black/70 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium">
+                            <span id="zoomLevel">100%</span>
+                        </div>
+                        
+                        <!-- Image Info Overlay -->
+                        <div class="absolute bottom-4 right-4 bg-black/70 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-medium">
+                            <span id="imageDimensions">${currentAsset.dimensions || 'Loading...'}</span>
                         </div>
                     </div>
                 </div>
-                <div class="flex space-x-2">
-                    <button onclick="applyCrop()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        Apply Crop
-                    </button>
-                    <button onclick="resetCrop()" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                        </svg>
-                        Reset
-                    </button>
-                    <button onclick="toggleCrop()" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors text-sm">Cancel</button>
+                
+                <!-- Content Section -->
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">${currentAsset.name}</h3>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                        ${currentAsset.size} • ${currentAsset.mime_type} • ${currentAsset.dimensions || 'Unknown dimensions'}
+                    </p>
+                    
+                    <!-- Engagement Stats -->
+                    <div class="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
+                        <div class="flex items-center space-x-6">
+                            <button class="flex items-center space-x-2 text-gray-500 hover:text-red-500 transition-colors group">
+                                <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                </svg>
+                                <span class="text-sm font-medium">Like</span>
+                            </button>
+                            <button class="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors group">
+                                <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                </svg>
+                                <span class="text-sm font-medium">Comment</span>
+                            </button>
+                            <button class="flex items-center space-x-2 text-gray-500 hover:text-green-500 transition-colors group">
+                                <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m9.032 4.026a9.001 9.001 0 01-7.432 0m9.032-4.026A9.001 9.001 0 0112 3c-4.474 0-8.268 3.12-9.032 7.326m0 0A9.001 9.001 0 0012 21c4.474 0 8.268-3.12 9.032-7.326"></path>
+                                </svg>
+                                <span class="text-sm font-medium">Share</span>
+                            </button>
+                        </div>
+                        <button class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -633,6 +740,431 @@ function downloadAsset() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+// Test function for canvas initialization
+function testCanvas() {
+    console.log('Testing canvas initialization...');
+    
+    // Hide fallback image and show canvas
+    const fallbackImg = document.getElementById('fallbackImage');
+    const canvasContainer = document.getElementById('canvasContainer');
+    
+    if (fallbackImg) {
+        fallbackImg.style.display = 'none';
+    }
+    
+    if (canvasContainer) {
+        canvasContainer.style.display = 'block';
+    }
+    
+    // Initialize canvas preview
+    if (currentAsset && currentAsset.url) {
+        console.log('Initializing canvas with URL:', currentAsset.url);
+        canvasImagePreview = new CanvasImagePreviewModal();
+        canvasImagePreview.init(currentAsset.url);
+    } else {
+        console.error('No current asset or URL available for canvas');
+    }
+}
+
+// Canvas Image Preview System
+let canvasImagePreview = null;
+
+class CanvasImagePreviewModal {
+    constructor() {
+        this.canvas = null;
+        this.ctx = null;
+        this.image = null;
+        this.scale = 1;
+        this.minScale = 0.1;
+        this.maxScale = 5;
+        this.isDragging = false;
+        this.dragStartX = 0;
+        this.dragStartY = 0;
+        this.imageX = 0;
+        this.imageY = 0;
+        this.filters = {
+            brightness: 100,
+            contrast: 100,
+            saturation: 100,
+            blur: 0
+        };
+    }
+
+    init(imageUrl) {
+        console.log('Initializing Canvas Image Preview with URL:', imageUrl);
+        this.canvas = document.getElementById('previewCanvas');
+        if (!this.canvas) {
+            console.error('Canvas element not found!');
+            return;
+        }
+
+        this.ctx = this.canvas.getContext('2d');
+        if (!this.ctx) {
+            console.error('Could not get canvas context!');
+            return;
+        }
+        
+        console.log('Canvas and context obtained successfully');
+        this.setupCanvas();
+        this.loadImage(imageUrl);
+        this.setupEventListeners();
+    }
+
+    setupCanvas() {
+        const container = this.canvas.parentElement;
+        const rect = container.getBoundingClientRect();
+        
+        // Set canvas size with device pixel ratio for sharp rendering
+        const dpr = window.devicePixelRatio || 1;
+        this.canvas.width = rect.width * dpr;
+        this.canvas.height = rect.height * dpr;
+        this.canvas.style.width = rect.width + 'px';
+        this.canvas.style.height = rect.height + 'px';
+        
+        // Scale context for device pixel ratio
+        this.ctx.scale(dpr, dpr);
+        
+        // Hide loading state
+        const loading = document.getElementById('canvasLoading');
+        if (loading) loading.style.display = 'none';
+        
+        console.log('Canvas setup:', {
+            width: this.canvas.width,
+            height: this.canvas.height,
+            containerWidth: rect.width,
+            containerHeight: rect.height,
+            dpr: dpr
+        });
+    }
+
+    loadImage(imageUrl) {
+        console.log('Loading image:', imageUrl);
+        this.image = new Image();
+        this.image.crossOrigin = 'anonymous';
+        
+        this.image.onload = () => {
+            console.log('Image loaded successfully:', {
+                width: this.image.width,
+                height: this.image.height,
+                src: this.image.src
+            });
+            this.centerImage();
+            this.render();
+            this.updateImageInfo();
+        };
+        
+        this.image.onerror = (error) => {
+            console.error('Failed to load image for canvas preview:', error);
+            console.error('Image URL was:', imageUrl);
+            
+            // Try to show error message on canvas
+            const container = this.canvas.parentElement;
+            const rect = container.getBoundingClientRect();
+            this.ctx.fillStyle = '#fef2f2';
+            this.ctx.fillRect(0, 0, rect.width, rect.height);
+            this.ctx.fillStyle = '#ef4444';
+            this.ctx.font = '16px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('Failed to load image', rect.width / 2, rect.height / 2);
+        };
+        
+        this.image.src = imageUrl;
+    }
+
+    centerImage() {
+        if (!this.image) return;
+        
+        const container = this.canvas.parentElement;
+        const rect = container.getBoundingClientRect();
+        const canvasWidth = rect.width;
+        const canvasHeight = rect.height;
+        
+        const canvasRatio = canvasWidth / canvasHeight;
+        const imageRatio = this.image.width / this.image.height;
+        
+        if (imageRatio > canvasRatio) {
+            this.scale = canvasWidth / this.image.width;
+        } else {
+            this.scale = canvasHeight / this.image.height;
+        }
+        
+        this.imageX = (canvasWidth - this.image.width * this.scale) / 2;
+        this.imageY = (canvasHeight - this.image.height * this.scale) / 2;
+        
+        this.updateZoomLevel();
+        
+        console.log('Center image:', {
+            imageWidth: this.image.width,
+            imageHeight: this.image.height,
+            canvasWidth: canvasWidth,
+            canvasHeight: canvasHeight,
+            scale: this.scale,
+            imageX: this.imageX,
+            imageY: this.imageY
+        });
+    }
+
+    setupEventListeners() {
+        // Mouse events
+        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        this.canvas.addEventListener('mouseup', () => this.handleMouseUp());
+        this.canvas.addEventListener('mouseleave', () => this.handleMouseUp());
+        
+        // Wheel event for zoom
+        this.canvas.addEventListener('wheel', (e) => this.handleWheel(e));
+        
+        // Touch events for mobile
+        this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e));
+        this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e));
+        this.canvas.addEventListener('touchend', () => this.handleTouchEnd());
+    }
+
+    handleMouseDown(e) {
+        this.isDragging = true;
+        const rect = this.canvas.getBoundingClientRect();
+        this.dragStartX = e.clientX - rect.left - this.imageX;
+        this.dragStartY = e.clientY - rect.top - this.imageY;
+        this.canvas.style.cursor = 'grabbing';
+    }
+
+    handleMouseMove(e) {
+        if (!this.isDragging) return;
+        
+        const rect = this.canvas.getBoundingClientRect();
+        this.imageX = e.clientX - rect.left - this.dragStartX;
+        this.imageY = e.clientY - rect.top - this.dragStartY;
+        this.render();
+    }
+
+    handleMouseUp() {
+        this.isDragging = false;
+        this.canvas.style.cursor = 'move';
+    }
+
+    handleWheel(e) {
+        e.preventDefault();
+        
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        const scaleFactor = e.deltaY > 0 ? 0.9 : 1.1;
+        const newScale = Math.max(this.minScale, Math.min(this.maxScale, this.scale * scaleFactor));
+        
+        if (newScale !== this.scale) {
+            // Zoom towards mouse position
+            const scaleChange = newScale - this.scale;
+            this.imageX -= (x - this.imageX) * (scaleChange / this.scale);
+            this.imageY -= (y - this.imageY) * (scaleChange / this.scale);
+            this.scale = newScale;
+            
+            this.render();
+            this.updateZoomLevel();
+        }
+    }
+
+    handleTouchStart(e) {
+        if (e.touches.length === 1) {
+            this.isDragging = true;
+            const rect = this.canvas.getBoundingClientRect();
+            this.dragStartX = e.touches[0].clientX - rect.left - this.imageX;
+            this.dragStartY = e.touches[0].clientY - rect.top - this.imageY;
+        }
+    }
+
+    handleTouchMove(e) {
+        e.preventDefault();
+        if (e.touches.length === 1 && this.isDragging) {
+            const rect = this.canvas.getBoundingClientRect();
+            this.imageX = e.touches[0].clientX - rect.left - this.dragStartX;
+            this.imageY = e.touches[0].clientY - rect.top - this.dragStartY;
+            this.render();
+        }
+    }
+
+    handleTouchEnd() {
+        this.isDragging = false;
+    }
+
+    render() {
+        if (!this.ctx || !this.image) return;
+        
+        const container = this.canvas.parentElement;
+        const rect = container.getBoundingClientRect();
+        
+        // Clear the entire canvas area
+        this.ctx.clearRect(0, 0, rect.width, rect.height);
+        
+        // Apply filters
+        this.ctx.filter = `brightness(${this.filters.brightness}%) contrast(${this.filters.contrast}%) saturate(${this.filters.saturation}%) blur(${this.filters.blur}px)`;
+        
+        // Draw background
+        this.ctx.fillStyle = '#f3f4f6';
+        this.ctx.fillRect(0, 0, rect.width, rect.height);
+        
+        // Draw image
+        this.ctx.drawImage(
+            this.image,
+            this.imageX,
+            this.imageY,
+            this.image.width * this.scale,
+            this.image.height * this.scale
+        );
+        
+        // Reset filter
+        this.ctx.filter = 'none';
+        
+        console.log('Render called:', {
+            imageX: this.imageX,
+            imageY: this.imageY,
+            scaledWidth: this.image.width * this.scale,
+            scaledHeight: this.image.height * this.scale,
+            canvasWidth: rect.width,
+            canvasHeight: rect.height
+        });
+    }
+
+    updateZoomLevel() {
+        const zoomElement = document.getElementById('zoomLevel');
+        if (zoomElement) {
+            zoomElement.textContent = Math.round(this.scale * 100) + '%';
+        }
+    }
+
+    updateImageInfo() {
+        const dimensionsElement = document.getElementById('imageDimensions');
+        if (dimensionsElement && this.image) {
+            dimensionsElement.textContent = `${this.image.width} × ${this.image.height}`;
+        }
+    }
+
+    zoomIn() {
+        this.scale = Math.min(this.maxScale, this.scale * 1.2);
+        this.render();
+        this.updateZoomLevel();
+    }
+
+    zoomOut() {
+        this.scale = Math.max(this.minScale, this.scale / 1.2);
+        this.render();
+        this.updateZoomLevel();
+    }
+
+    resetZoom() {
+        this.centerImage();
+        this.render();
+    }
+
+    setFilters(filters) {
+        this.filters = { ...this.filters, ...filters };
+        this.render();
+    }
+
+    resetFilters() {
+        this.filters = {
+            brightness: 100,
+            contrast: 100,
+            saturation: 100,
+            blur: 0
+        };
+        
+        // Reset UI controls
+        document.getElementById('brightness').value = 100;
+        document.getElementById('contrast').value = 100;
+        document.getElementById('saturation').value = 100;
+        document.getElementById('blur').value = 0;
+        
+        // Update labels
+        const labels = document.querySelectorAll('#filtersPanel span.text-xs');
+        labels[0].textContent = '100%';
+        labels[1].textContent = '100%';
+        labels[2].textContent = '100%';
+        labels[3].textContent = '0px';
+        
+        this.render();
+    }
+
+    destroy() {
+        if (this.canvas) {
+            this.canvas.removeEventListener('mousedown', this.handleMouseDown);
+            this.canvas.removeEventListener('mousemove', this.handleMouseMove);
+            this.canvas.removeEventListener('mouseup', this.handleMouseUp);
+            this.canvas.removeEventListener('mouseleave', this.handleMouseUp);
+            this.canvas.removeEventListener('wheel', this.handleWheel);
+            this.canvas.removeEventListener('touchstart', this.handleTouchStart);
+            this.canvas.removeEventListener('touchmove', this.handleTouchMove);
+            this.canvas.removeEventListener('touchend', this.handleTouchEnd);
+        }
+    }
+}
+
+// Canvas control functions
+function zoomIn() {
+    if (canvasImagePreview) canvasImagePreview.zoomIn();
+}
+
+function zoomOut() {
+    if (canvasImagePreview) canvasImagePreview.zoomOut();
+}
+
+function resetZoom() {
+    if (canvasImagePreview) canvasImagePreview.resetZoom();
+}
+
+function toggleFilters() {
+    const panel = document.getElementById('filtersPanel');
+    panel.classList.toggle('hidden');
+}
+
+function applyFilters() {
+    if (!canvasImagePreview) return;
+    
+    const filters = {
+        brightness: document.getElementById('brightness').value,
+        contrast: document.getElementById('contrast').value,
+        saturation: document.getElementById('saturation').value,
+        blur: document.getElementById('blur').value
+    };
+    
+    // Update labels
+    const labels = document.querySelectorAll('#filtersPanel span.text-xs');
+    labels[0].textContent = filters.brightness + '%';
+    labels[1].textContent = filters.contrast + '%';
+    labels[2].textContent = filters.saturation + '%';
+    labels[3].textContent = filters.blur + 'px';
+    
+    canvasImagePreview.setFilters(filters);
+}
+
+function resetFilters() {
+    if (canvasImagePreview) canvasImagePreview.resetFilters();
+}
+
+function toggleFullscreen() {
+    const container = document.querySelector('#previewCanvas').parentElement;
+    
+    if (!document.fullscreenElement) {
+        container.requestFullscreen().then(() => {
+            setTimeout(() => {
+                if (canvasImagePreview) {
+                    canvasImagePreview.setupCanvas();
+                    canvasImagePreview.render();
+                }
+            }, 100);
+        });
+    } else {
+        document.exitFullscreen().then(() => {
+            setTimeout(() => {
+                if (canvasImagePreview) {
+                    canvasImagePreview.setupCanvas();
+                    canvasImagePreview.render();
+                }
+            }, 100);
+        });
+    }
 }
 
 // PDF Viewer Functions

@@ -229,6 +229,57 @@ class WorkspaceController extends Controller
             ->with('success', 'Member removed successfully');
     }
 
+    public function shareIndex(Request $request)
+    {
+        $userId = $request->user()->id;
+        
+        // Debug: Check all workspace users for this user
+        $allWorkspaceUsers = WorkspaceUser::where('user_id', $userId)->get();
+        \Log::info('All workspace users for user ' . $userId . ':');
+        foreach ($allWorkspaceUsers as $wu) {
+            \Log::info('  - Workspace ID: ' . $wu->workspace_id . ', Status: ' . $wu->status . ', Role: ' . $wu->role);
+        }
+        
+        // Get workspaces shared with the current user (approved workspace users)
+        $workspaceUsers = WorkspaceUser::where('user_id', $userId)
+            ->where('status', 'approved')
+            ->where('role', '!=', 'owner')
+            ->with(['workspace' => function ($query) {
+                $query->with(['workspaceUsers' => function ($query) {
+                    $query->where('status', 'approved');
+                }, 'projects', 'owner']);
+            }])
+            ->get();
+        
+        // Debug: Log the workspace users found
+        \Log::info('Approved workspace users for user ' . $userId . ': ' . $workspaceUsers->count());
+        
+        $workspaces = $workspaceUsers->pluck('workspace');
+        
+        // Debug: Log the workspaces found
+        \Log::info('Workspaces found: ' . $workspaces->count());
+        
+        // Temporary: Also show pending workspaces for debugging
+        if ($workspaces->count() === 0) {
+            $pendingWorkspaceUsers = WorkspaceUser::where('user_id', $userId)
+                ->where('status', 'pending')
+                ->with(['workspace' => function ($query) {
+                    $query->with(['owner']);
+                }])
+                ->get();
+            
+            \Log::info('Pending workspace users for user ' . $userId . ': ' . $pendingWorkspaceUsers->count());
+            
+            if ($pendingWorkspaceUsers->count() > 0) {
+                // For now, show pending workspaces too to help with debugging
+                $workspaces = $pendingWorkspaceUsers->pluck('workspace');
+                \Log::info('Showing pending workspaces for debugging: ' . $workspaces->count());
+            }
+        }
+        
+        return view('workspaces.share-index', compact('workspaces'));
+    }
+
     public function activityLog(Request $request)
     {
         $user = $request->user();

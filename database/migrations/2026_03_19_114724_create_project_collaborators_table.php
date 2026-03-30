@@ -25,7 +25,6 @@ return new class extends Migration
             $table->timestamp('invited_at')->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->timestamps();
-            $table->unique(['project_id', 'user_id']);
         });
     }
 

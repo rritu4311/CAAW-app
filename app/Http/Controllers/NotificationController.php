@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\WorkspaceUser;
+use App\Models\ProjectCollaborator;
 use App\Notifications\AccessShare;
 use App\Notifications\WorkspaceRequestApproved;
+use App\Notifications\ProjectRequestApproved;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -313,6 +315,92 @@ class NotificationController extends Controller
         } catch (\Exception $e) {
             \Log::error('Error rejecting workspace request: ' . $e->getMessage());
             return back()->with('error', 'Error rejecting workspace request: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Approve a project request.
+     */
+    public function approveProjectRequest(Request $request, $id)
+    {
+        // Simple debug to verify method is called
+        \Log::info('approveProjectRequest method called with ID: ' . $id);
+        
+        try {
+            // Find the project collaborator record
+            $projectCollaborator = ProjectCollaborator::findOrFail($id);
+            \Log::info('Found ProjectCollaborator: ' . $projectCollaborator->id . ', Status: ' . $projectCollaborator->status);
+            
+            if($projectCollaborator->status != 'pending'){
+                return back()->with('error', 'Invitation is already changed to '.$projectCollaborator->status);
+            }
+            
+            // Check if the current user is the project owner
+            $project = \App\Models\Project::findOrFail($projectCollaborator->project_id);
+            if ($project->created_by !== $request->user()->id) {
+                abort(403, 'Unauthorized action');
+            }
+            
+            \Log::info('Processing project approval - Project ID: ' . $projectCollaborator->project_id . ', User ID: ' . $projectCollaborator->user_id);
+            
+            // Approve the project collaborator request
+            $projectCollaborator->status = 'approved';
+            $projectCollaborator->approved_at = now();
+            $projectCollaborator->save();
+
+            \Log::info('Project collaborator updated to status: ' . $projectCollaborator->status);
+
+            // Send approval notification to the user
+            $user = User::findOrFail($projectCollaborator->user_id);
+            $user->notify(new ProjectRequestApproved($project));
+
+            return back()->with('success', '✅ Project request approved! The user has been granted access to the project.');
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            \Log::error('ProjectCollaborator not found with ID: ' . $id);
+            return back()->with('error', 'Invalid invitation: Project collaborator not found');
+        } catch (\Exception $e) {
+            \Log::error('Error approving project request: ' . $e->getMessage());
+            return back()->with('error', 'Error approving project request: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Reject a project request.
+     */
+    public function rejectProjectRequest(Request $request, $id)
+    {
+        // Simple debug to verify method is called
+        \Log::info('rejectProjectRequest method called with ID: ' . $id);
+        
+        try {
+            // Find the project collaborator record
+            $projectCollaborator = ProjectCollaborator::findOrFail($id);
+            \Log::info('Found ProjectCollaborator: ' . $projectCollaborator->id . ', Status: ' . $projectCollaborator->status);
+            
+            // Check if the current user is the project owner
+            $project = \App\Models\Project::findOrFail($projectCollaborator->project_id);
+            if ($project->created_by !== $request->user()->id) {
+                abort(403, 'Unauthorized action');
+            }
+            
+            \Log::info('Processing project rejection - Project ID: ' . $projectCollaborator->project_id . ', User ID: ' . $projectCollaborator->user_id);
+            \Log::info('Current status before update: ' . $projectCollaborator->status);
+            
+            // Reject the project collaborator request
+            $projectCollaborator->status = 'rejected';
+            $projectCollaborator->save();
+
+            \Log::info('Project collaborator updated to status: ' . $projectCollaborator->status);
+
+            return back()->with('success', '❌ Project request rejected. The user has been denied access to the project.');
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            \Log::error('ProjectCollaborator not found with ID: ' . $id);
+            return back()->with('error', 'Invalid invitation: Project collaborator not found');
+        } catch (\Exception $e) {
+            \Log::error('Error rejecting project request: ' . $e->getMessage());
+            return back()->with('error', 'Error rejecting project request: ' . $e->getMessage());
         }
     }
 }

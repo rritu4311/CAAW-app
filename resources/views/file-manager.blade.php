@@ -190,9 +190,11 @@
                         <div class="group bg-white dark:bg-gray-800 rounded-xl overflow-hidden hover:shadow-lg hover:scale-105 transition-all duration-300 border border-gray-200 dark:border-gray-700">
                             @if($file['is_image'])
                                 <div class="relative h-32 cursor-pointer" onclick="openAssetPreview({{ $file['id'] }})">
-                                    <img src="/assets/{{ $file['id'] }}/thumbnail/medium" alt="{{ $file['name'] }}" 
-                                         class="w-full h-full object-cover hover:opacity-90 transition-opacity"
-                                         onerror="this.src='{{ $file['url'] }}'">
+                                    <canvas data-image-src="/assets/{{ $file['id'] }}/thumbnail/medium" 
+                                            data-fallback-src="{{ $file['url'] }}"
+                                            data-file-name="{{ $file['name'] }}"
+                                            class="image-preview-canvas w-full h-full object-cover hover:opacity-90 transition-opacity"
+                                            width="300" height="200"></canvas>
                                     <div class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black bg-opacity-40">
                                         <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -320,8 +322,226 @@
 </x-app-layout>
 
 <script>
+// Canvas Image Preview System
+class CanvasImagePreview {
+    constructor() {
+        this.canvases = [];
+        this.init();
+    }
+
+    init() {
+        // Initialize all canvas elements
+        document.querySelectorAll('.image-preview-canvas').forEach(canvas => {
+            this.loadImage(canvas);
+        });
+    }
+
+    loadImage(canvas) {
+        const ctx = canvas.getContext('2d');
+        const imageSrc = canvas.dataset.imageSrc;
+        const fallbackSrc = canvas.dataset.fallbackSrc;
+        const fileName = canvas.dataset.fileName;
+
+        // Set canvas size
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * window.devicePixelRatio;
+        canvas.height = rect.height * window.devicePixelRatio;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+        // Show loading state
+        this.drawLoadingState(ctx, rect.width, rect.height);
+
+        // Load image
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        
+        img.onload = () => {
+            this.drawImageWithEffects(ctx, img, rect.width, rect.height);
+            this.addHoverEffect(canvas, ctx, img, rect.width, rect.height);
+        };
+
+        img.onerror = () => {
+            // Try fallback image
+            const fallbackImg = new Image();
+            fallbackImg.crossOrigin = 'anonymous';
+            
+            fallbackImg.onload = () => {
+                this.drawImageWithEffects(ctx, fallbackImg, rect.width, rect.height);
+                this.addHoverEffect(canvas, ctx, fallbackImg, rect.width, rect.height);
+            };
+            
+            fallbackImg.onerror = () => {
+                this.drawErrorState(ctx, rect.width, rect.height, fileName);
+            };
+            
+            fallbackImg.src = fallbackSrc;
+        };
+
+        img.src = imageSrc;
+    }
+
+    drawLoadingState(ctx, width, height) {
+        ctx.fillStyle = '#f3f4f6';
+        ctx.fillRect(0, 0, width, height);
+        
+        // Draw loading spinner
+        ctx.strokeStyle = '#9ca3af';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(width / 2, height / 2, 15, 0, Math.PI * 1.5);
+        ctx.stroke();
+        
+        // Add subtle gradient
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0.1)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+    }
+
+    drawErrorState(ctx, width, height, fileName) {
+        ctx.fillStyle = '#fef2f2';
+        ctx.fillRect(0, 0, width, height);
+        
+        // Draw error icon
+        ctx.fillStyle = '#ef4444';
+        ctx.font = '24px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⚠', width / 2, height / 2 - 10);
+        
+        ctx.font = '10px Arial';
+        ctx.fillStyle = '#991b1b';
+        ctx.fillText('Failed to load', width / 2, height / 2 + 15);
+        
+        // Add error border
+        ctx.strokeStyle = '#fca5a5';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0, 0, width, height);
+    }
+
+    drawImageWithEffects(ctx, img, width, height) {
+        // Calculate aspect ratio
+        const imgRatio = img.width / img.height;
+        const canvasRatio = width / height;
+        
+        let drawWidth, drawHeight, drawX, drawY;
+        
+        if (imgRatio > canvasRatio) {
+            drawWidth = width;
+            drawHeight = width / imgRatio;
+            drawX = 0;
+            drawY = (height - drawHeight) / 2;
+        } else {
+            drawHeight = height;
+            drawWidth = height * imgRatio;
+            drawX = (width - drawWidth) / 2;
+            drawY = 0;
+        }
+
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+        
+        // Add subtle background
+        ctx.fillStyle = '#f9fafb';
+        ctx.fillRect(0, 0, width, height);
+        
+        // Apply shadow for depth
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 4;
+        
+        // Draw image
+        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+        
+        // Reset shadow
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        
+        // Add subtle vignette effect
+        const gradient = ctx.createRadialGradient(
+            width / 2, height / 2, 0,
+            width / 2, height / 2, Math.max(width, height) / 2
+        );
+        gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0.05)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+        
+        // Add subtle border
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0, 0, width, height);
+    }
+
+    addHoverEffect(canvas, ctx, img, width, height) {
+        let isHovering = false;
+        let animationFrame = null;
+
+        canvas.addEventListener('mouseenter', () => {
+            isHovering = true;
+            this.animateHover(canvas, ctx, img, width, height, true);
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isHovering = false;
+            this.animateHover(canvas, ctx, img, width, height, false);
+        });
+    }
+
+    animateHover(canvas, ctx, img, width, height, isEntering) {
+        const duration = 300;
+        const startTime = Date.now();
+        const startScale = isEntering ? 1 : 1.05;
+        const endScale = isEntering ? 1.05 : 1;
+
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easeProgress = this.easeInOutCubic(progress);
+            
+            const currentScale = startScale + (endScale - startScale) * easeProgress;
+            
+            // Clear and redraw with scale
+            ctx.clearRect(0, 0, width, height);
+            ctx.save();
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            ctx.translate(centerX, centerY);
+            ctx.scale(currentScale, currentScale);
+            ctx.translate(-centerX, -centerY);
+            
+            this.drawImageWithEffects(ctx, img, width, height);
+            
+            ctx.restore();
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
+
+        if (animationFrame) {
+            cancelAnimationFrame(animationFrame);
+        }
+        
+        animationFrame = requestAnimationFrame(animate);
+    }
+
+    easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+}
+
 // Drag and Drop functionality
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Canvas Image Preview
+    new CanvasImagePreview();
+    
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const uploadForm = document.getElementById('uploadForm');
