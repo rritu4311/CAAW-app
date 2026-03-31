@@ -41,8 +41,12 @@
                                 Created: {{ $folder->created_at->format('M d, Y') }} | 
                                 {{ $folder->children->count() }} subfolder(s)
                             </p>
+                            @if($readOnly)
+                                <span class="mt-2 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium inline-block">Read-Only (Workspace Admin)</span>
+                            @endif
                         </div>
                         
+                        @if(!$readOnly)
                         <!-- Actions -->
                         <div class="flex space-x-2">
                             <!-- Create Subfolder Button -->
@@ -60,6 +64,7 @@
                                 </button>
                             </form>
                         </div>
+                        @endif
                     </div>
 
                     <!-- Success Message -->
@@ -70,7 +75,7 @@
                     @endif
 
                     <!-- Create Subfolder Form -->
-                    @if(request('create_subfolder'))
+                    @if(!$readOnly && request('create_subfolder'))
                         <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                             <form action="{{ route('folders.store') }}" method="POST">
                                 @csrf
@@ -92,6 +97,7 @@
                     @endif
 
                     <!-- File Upload Section -->
+                    @if(!$readOnly)
                     <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 hover:border-blue-500 dark:hover:border-blue-400 transition-colors mb-6">
                         <div class="text-center">
                             <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,6 +143,7 @@
                             </form>
                         </div>
                     </div>
+                    @endif
 
                     <!-- Folder Contents -->
                     <div class="bg-gray-50 rounded-lg p-6">
@@ -157,6 +164,7 @@
                                             </a>
                                             
                                             <!-- Action Buttons -->
+                                            @if(!$readOnly)
                                             <div class="flex space-x-1">
                                                 <!-- Edit Button -->
                                                 <button onclick="openEditFolderModal({{ $child->id }}, '{{ $child->name }}')" 
@@ -179,6 +187,7 @@
                                                     </button>
                                                 </form>
                                             </div>
+                                            @endif
                                         </div>
                                         <p class="text-sm text-gray-600">
                                             {{ $child->children->count() }} subfolder(s)
@@ -327,6 +336,7 @@
                                                 <a href="{{ Storage::url($asset->file_path) }}" download="{{ $asset->name }}" 
                                                    class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium py-2 px-3 rounded text-center transition-colors">Download</a>
                                                 
+                                                @if(!$readOnly)
                                                 <form action="{{ route('folders.file.delete') }}" method="POST" class="inline">
                                                     @csrf
                                                     @method('DELETE')
@@ -336,6 +346,7 @@
                                                         Delete
                                                     </button>
                                                 </form>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>
@@ -348,11 +359,13 @@
             </div>
         </div>
 
+    @if(!$readOnly)
     <!-- Create Subfolder Modal -->
     <x-create-folder-modal :projectId="$folder->project->id" :parentFolderId="$folder->id" />
     
     <!-- Edit Folder Modal -->
     <x-edit-folder-modal />
+    @endif
 
     <!-- File Viewer Component (Laravel Blade) -->
     <x-file-viewer :assets="$folder->assets" />

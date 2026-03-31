@@ -1,4 +1,4 @@
-@props(['folders', 'level' => 0, 'projectId'])
+@props(['folders', 'level' => 0, 'projectId', 'readOnly' => false])
 
 <ul class="{{ $level > 0 ? 'ml-6 mt-2' : '' }} space-y-2">
     @forelse($folders as $folder)
@@ -12,6 +12,7 @@
                 </a>
             </div>
             
+            @if(!$readOnly)
             <div class="flex items-center space-x-2">
                 <!-- Edit Button -->
                 <button onclick="openEditFolderModal({{ $folder->id }}, '{{ $folder->name }}')" 
@@ -34,6 +35,7 @@
                     </button>
                 </form>
             </div>
+            @endif
         </li>
     @empty
         <li class="text-gray-500 text-center py-4">No folders yet. Create your first folder below!</li>

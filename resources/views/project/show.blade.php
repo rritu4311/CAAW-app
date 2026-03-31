@@ -13,6 +13,9 @@
                     <div class="flex justify-between items-center mb-6">
                         <div>
                             <h1 class="text-3xl font-bold mb-4">{{ $project->name }}</h1>
+                            @if(isset($readOnly) && $readOnly)
+                                <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">Read-Only (Workspace Admin)</span>
+                            @endif
                         </div>
                         
                         <!-- Action Buttons -->
@@ -25,10 +28,12 @@
                                     </svg>
                                 </a>
                             @endif
-                            <button onclick="openModal('createFolderModalroot')" 
-                                    class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
-                                Create Folder
-                            </button>
+                            @if(!isset($readOnly) || !$readOnly)
+                                <button onclick="openModal('createFolderModalroot')" 
+                                        class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                                    Create Folder
+                                </button>
+                            @endif
                         </div>
                     </div>
 
@@ -51,7 +56,7 @@
                         @endif
 
                         <div class="folder-tree">
-                            <x-folder-tree :folders="$folders" :projectId="$project->id" />
+                            <x-folder-tree :folders="$folders" :projectId="$project->id" :readOnly="isset($readOnly) ? $readOnly : false" />
                         </div>
                     </div>
 

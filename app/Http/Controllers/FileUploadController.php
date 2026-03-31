@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\Asset;
 use App\Models\Folder;
 use App\Models\Project;
+use App\Models\WorkspaceUser;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
@@ -37,6 +38,17 @@ class FileUploadController extends Controller
 
     public function upload(Request $request): JsonResponse
     {
+        // Check write permissions
+        $folderId = $request->input('folder');
+        $project = $this->getProjectFromFolder($folderId);
+        
+        if (!$project || !$this->hasWriteAccess($project, $request->user())) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to upload files to this project',
+            ], 403);
+        }
+
         Log::info('File upload started', [
             'user_id' => auth()->id(),
             'files_count' => $request->hasFile('files') ? count($request->file('files')) : 0,
@@ -348,6 +360,17 @@ class FileUploadController extends Controller
 
     public function createFolder(Request $request): JsonResponse
     {
+        // Check write permissions
+        $folderId = $request->input('parent_folder');
+        $project = $this->getProjectFromFolder($folderId);
+        
+        if (!$project || !$this->hasWriteAccess($project, $request->user())) {
+            return response()->json([
+                'success' => false,
+                'error' => 'You do not have permission to create folders in this project',
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'parent_folder' => 'nullable|string|max:255',
@@ -412,6 +435,20 @@ class FileUploadController extends Controller
 
     public function deleteFile(Request $request): JsonResponse
     {
+        // Check write permissions
+        $path = $request->input('path');
+        $asset = Asset::where('path', $path)->first();
+        
+        if ($asset && $asset->project_id) {
+            $project = Project::find($asset->project_id);
+            if ($project && !$this->hasWriteAccess($project, $request->user())) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'You do not have permission to delete files in this project',
+                ], 403);
+            }
+        }
+
         $validator = Validator::make($request->all(), [
             'path' => 'required|string',
         ]);
@@ -669,6 +706,17 @@ class FileUploadController extends Controller
 
     public function deleteFolder(Request $request): JsonResponse
     {
+        // Check write permissions
+        $path = $request->input('path');
+        $project = $this->getProjectFromPath($path);
+        
+        if (!$project || !$this->hasWriteAccess($project, $request->user())) {
+            return response()->json([
+                'success' => false,
+                'error' => 'You do not have permission to delete folders in this project',
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'path' => 'required|string',
         ]);
@@ -716,5 +764,61 @@ class FileUploadController extends Controller
                 'error' => 'Failed to delete folder',
             ], 500);
         }
+    }
+
+    /**
+     * Check if user has write access to project (owner or collaborator, NOT workspace admin).
+     */
+    private function hasWriteAccess(Project $project, $user): bool
+    {
+        // Project owner always has write access
+        if ($project->isOwnedBy($user)) {
+            return true;
+        }
+
+        // Check if user is a project collaborator
+        $isCollaborator = \App\Models\ProjectCollaborator::where('project_id', $project->id)
+            ->where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->exists();
+
+        if ($isCollaborator) {
+            return true;
+        }
+
+        // Workspace admins only have read access, NOT write access
+        return false;
+    }
+
+    /**
+     * Get project from folder ID.
+     */
+    private function getProjectFromFolder($folderId): ?Project
+    {
+        if (is_numeric($folderId)) {
+            $folder = Folder::find($folderId);
+            if ($folder) {
+                return $folder->project;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get project from path.
+     */
+    private function getProjectFromPath(string $path): ?Project
+    {
+        // Extract project info from path if possible
+        // Path format: uploads/{folder_name}/...
+        $parts = explode('/', $path);
+        if (count($parts) >= 2) {
+            $folderName = $parts[1];
+            $folder = Folder::where('name', $folderName)->first();
+            if ($folder) {
+                return $folder->project;
+            }
+        }
+        return null;
     }
 }

@@ -146,6 +146,25 @@
                                                                 Reject
                                                             </button>
                                                         </form>
+                                                    @elseif(in_array($notification->data['type'], ['workspace_invitation', 'workspace_invitation_pending']))
+                                                        <form method="POST" action="{{ route('notifications.approve', $notification->id) }}" class="inline">
+                                                            @csrf
+                                                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md">
+                                                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                                </svg>
+                                                                Approve
+                                                            </button>
+                                                        </form>
+                                                        <form method="POST" action="{{ route('notifications.reject', $notification->id) }}" class="inline">
+                                                            @csrf
+                                                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-all duration-200 shadow-sm hover:shadow-md">
+                                                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                                </svg>
+                                                                Reject
+                                                            </button>
+                                                        </form>
                                                     @else
                                                         {{-- For other notification types, don't show approve/reject buttons --}}
                                                         <span class="text-sm text-gray-500 dark:text-gray-400">No actions available</span>

@@ -64,4 +64,12 @@ class WorkspaceUser extends Model
     {
         return $this->role === 'member';
     }
+
+    /**
+     * Check if the user has full admin access (owner).
+     */
+    public function isFullAdmin(): bool
+    {
+        return $this->role === 'owner';
+    }
 }

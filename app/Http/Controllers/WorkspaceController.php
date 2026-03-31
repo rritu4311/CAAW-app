@@ -15,11 +15,8 @@ class WorkspaceController extends Controller
 {
     public function index(Request $request)
     {
-        // Get workspaces where user has approved access (including owned workspaces)
-        $workspaces = Workspace::whereHas('workspaceUsers', function ($query) use ($request) {
-            $query->where('user_id', $request->user()->id)
-                  ->where('status', 'approved');
-        })->orWhere('owner_id', $request->user()->id)->get();
+        // Get only workspaces owned by the user (not shared ones)
+        $workspaces = Workspace::where('owner_id', $request->user()->id)->get();
         
         return view('workspaces.index', compact('workspaces'));
     }
@@ -54,10 +51,8 @@ class WorkspaceController extends Controller
 
     public function show(Request $request, Workspace $workspace)
     {
-        // Allow access if user is the owner
-        if ($workspace->isOwnedBy($request->user())) {
-            return view('workspace.index', compact('workspace'));
-        }
+        // Check if user is owner
+        $isOwner = $workspace->isOwnedBy($request->user());
         
         // Check if user has approved access
         $hasAccess = WorkspaceUser::where('workspace_id', $workspace->id)
@@ -65,11 +60,11 @@ class WorkspaceController extends Controller
             ->where('status', 'approved')
             ->exists();
             
-        if (!$hasAccess) {
+        if (!$isOwner && !$hasAccess) {
             abort(403, 'You do not have access to this workspace');
         }
 
-        return view('workspace.index', compact('workspace'));
+        return view('workspace.index', compact('workspace', 'isOwner'));
     }
 
     public function update(Request $request, Workspace $workspace)
@@ -109,7 +104,7 @@ class WorkspaceController extends Controller
 
     public function share(Request $request, Workspace $workspace)
     {
-        if (!$workspace->isOwnedBy($request->user())) {
+        if (!$this->hasAdminAccess($workspace, $request->user())) {
             abort(403);
         }
 
@@ -139,7 +134,7 @@ class WorkspaceController extends Controller
 
     public function invite(Request $request, Workspace $workspace)
     {
-        if (!$workspace->isOwnedBy($request->user())) {
+        if (!$this->hasAdminAccess($workspace, $request->user())) {
             abort(403);
         }
 
@@ -211,13 +206,23 @@ class WorkspaceController extends Controller
 
     public function removeMember(Request $request, Workspace $workspace, User $user)
     {
-        if (!$workspace->isOwnedBy($request->user())) {
+        if (!$this->hasAdminAccess($workspace, $request->user())) {
             abort(403);
         }
 
         // Prevent removing the owner
         if ($workspace->owner_id === $user->id) {
             abort(403, 'Cannot remove the workspace owner');
+        }
+
+        // Admins cannot remove other admins or the owner
+        if (!$workspace->isOwnedBy($request->user())) {
+            $targetUser = WorkspaceUser::where('workspace_id', $workspace->id)
+                ->where('user_id', $user->id)
+                ->first();
+            if ($targetUser && ($targetUser->role === 'owner' || $targetUser->role === 'admin')) {
+                abort(403, 'Admins can only remove regular members');
+            }
         }
 
         // Remove all workspace user records for this user (both approved and pending)
@@ -227,6 +232,38 @@ class WorkspaceController extends Controller
 
         return redirect()->route('workspaces.share', $workspace)
             ->with('success', 'Member removed successfully');
+    }
+
+    /**
+     * Check if user has admin access to workspace (owner or admin role).
+     */
+    private function hasAdminAccess(Workspace $workspace, User $user): bool
+    {
+        if ($workspace->isOwnedBy($user)) {
+            return true;
+        }
+
+        $workspaceUser = WorkspaceUser::where('workspace_id', $workspace->id)
+            ->where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->first();
+
+        return $workspaceUser && ($workspaceUser->role === 'admin' || $workspaceUser->role === 'owner');
+    }
+
+    /**
+     * Check if user has read-only access to workspace.
+     */
+    private function hasReadAccess(Workspace $workspace, User $user): bool
+    {
+        if ($workspace->isOwnedBy($user)) {
+            return true;
+        }
+
+        return WorkspaceUser::where('workspace_id', $workspace->id)
+            ->where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->exists();
     }
 
     public function shareIndex(Request $request)
@@ -240,10 +277,12 @@ class WorkspaceController extends Controller
             \Log::info('  - Workspace ID: ' . $wu->workspace_id . ', Status: ' . $wu->status . ', Role: ' . $wu->role);
         }
         
-        // Get workspaces shared with the current user (approved workspace users)
+        // Get workspaces shared with the current user (approved workspace users - EXCLUDING owned)
         $workspaceUsers = WorkspaceUser::where('user_id', $userId)
             ->where('status', 'approved')
-            ->where('role', '!=', 'owner')
+            ->whereHas('workspace', function ($query) use ($userId) {
+                $query->where('owner_id', '!=', $userId);
+            })
             ->with(['workspace' => function ($query) {
                 $query->with(['workspaceUsers' => function ($query) {
                     $query->where('status', 'approved');
@@ -259,25 +298,18 @@ class WorkspaceController extends Controller
         // Debug: Log the workspaces found
         \Log::info('Workspaces found: ' . $workspaces->count());
         
-        // Temporary: Also show pending workspaces for debugging
-        if ($workspaces->count() === 0) {
-            $pendingWorkspaceUsers = WorkspaceUser::where('user_id', $userId)
-                ->where('status', 'pending')
-                ->with(['workspace' => function ($query) {
-                    $query->with(['owner']);
-                }])
-                ->get();
-            
-            \Log::info('Pending workspace users for user ' . $userId . ': ' . $pendingWorkspaceUsers->count());
-            
-            if ($pendingWorkspaceUsers->count() > 0) {
-                // For now, show pending workspaces too to help with debugging
-                $workspaces = $pendingWorkspaceUsers->pluck('workspace');
-                \Log::info('Showing pending workspaces for debugging: ' . $workspaces->count());
-            }
-        }
+        // Get pending workspace invitations for this user (separate from approved)
+        $pendingWorkspaceUsers = WorkspaceUser::where('user_id', $userId)
+            ->where('status', 'pending')
+            ->with(['workspace' => function ($query) {
+                $query->with('owner');
+            }])
+            ->get();
         
-        return view('workspaces.share-index', compact('workspaces'));
+        $pendingWorkspaces = $pendingWorkspaceUsers->pluck('workspace');
+        \Log::info('Pending workspaces for user ' . $userId . ': ' . $pendingWorkspaces->count());
+        
+        return view('workspaces.share-index', compact('workspaces', 'pendingWorkspaces'));
     }
 
     public function activityLog(Request $request)

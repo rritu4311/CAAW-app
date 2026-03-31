@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\Folder;
 use App\Models\Asset;
 use App\Models\Project;
+use App\Models\WorkspaceUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -96,6 +97,16 @@ class FolderController extends Controller
 
     public function store(Request $request)
     {
+        // Check write permissions - must be project owner or collaborator
+        $projectId = $request->input('project_id');
+        $project = Project::find($projectId);
+        
+        if (!$project || !$this->hasWriteAccess($project, $request->user())) {
+            return redirect()->back()
+                ->withErrors(['permission' => 'You do not have permission to create folders in this project'])
+                ->withInput();
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'parent_folder_id' => 'nullable|exists:folders,id',
@@ -142,7 +153,10 @@ class FolderController extends Controller
         // Get breadcrumb path
         $breadcrumbs = $this->getBreadcrumbs($folder);
         
-        return view('folder.show', compact('folder', 'breadcrumbs'));
+        // Check if user has read-only access (workspace admin without write permissions)
+        $readOnly = !$this->hasWriteAccess($folder->project, auth()->user());
+        
+        return view('folder.show', compact('folder', 'breadcrumbs', 'readOnly'));
     }
 
     private function getBreadcrumbs(Folder $folder)
@@ -160,6 +174,14 @@ class FolderController extends Controller
 
     public function destroy(Folder $folder)
     {
+        // Check write permissions - must be project owner or collaborator
+        $project = $folder->project;
+        
+        if (!$project || !$this->hasWriteAccess($project, auth()->user())) {
+            return redirect()->back()
+                ->withErrors(['permission' => 'You do not have permission to delete folders in this project']);
+        }
+
         // Store parent information before deletion
         $parentFolder = $folder->parent;
         $project = $folder->project;
@@ -188,6 +210,29 @@ class FolderController extends Controller
 
     public function uploadFiles(Request $request)
     {
+        // Check write permissions
+        $folderId = $request->input('folder');
+        $project = null;
+        
+        if (is_numeric($folderId)) {
+            $folder = Folder::find($folderId);
+            if ($folder) {
+                $project = $folder->project;
+            }
+        }
+        
+        if (!$project) {
+            return redirect()->back()
+                ->withErrors(['permission' => 'You do not have permission to upload files to this project'])
+                ->withInput();
+        }
+        
+        if (!$this->hasWriteAccess($project, $request->user())) {
+            return redirect()->back()
+                ->withErrors(['permission' => 'You do not have permission to upload files to this project'])
+                ->withInput();
+        }
+
         // Debug: Log incoming request
         \Log::info('Upload request received', [
             'files' => $request->hasFile('files') ? 'Yes' : 'No',
@@ -266,6 +311,18 @@ class FolderController extends Controller
 
     public function deleteFile(Request $request)
     {
+        // Check write permissions
+        $path = $request->input('path');
+        $asset = Asset::where('file_path', $path)->first();
+        
+        if ($asset && $asset->project_id) {
+            $project = Project::find($asset->project_id);
+            if ($project && !$this->hasWriteAccess($project, auth()->user())) {
+                return redirect()->back()
+                    ->withErrors(['permission' => 'You do not have permission to delete files in this project']);
+            }
+        }
+
         $validator = Validator::make($request->all(), [
             'path' => 'required|string',
         ]);
@@ -299,6 +356,30 @@ class FolderController extends Controller
             return redirect()->back()
                 ->withErrors(['delete' => 'Failed to delete file']);
         }
+    }
+
+    /**
+     * Check if user has write access to project (owner or collaborator, NOT workspace admin).
+     */
+    private function hasWriteAccess(Project $project, $user): bool
+    {
+        // Project owner always has write access
+        if ($project->isOwnedBy($user)) {
+            return true;
+        }
+
+        // Check if user is a project collaborator
+        $isCollaborator = \App\Models\ProjectCollaborator::where('project_id', $project->id)
+            ->where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->exists();
+
+        if ($isCollaborator) {
+            return true;
+        }
+
+        // Workspace admins only have read access, NOT write access
+        return false;
     }
 
     private function processFile($file, string $folder, $folderId = null): array

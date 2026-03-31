@@ -152,12 +152,13 @@ class NotificationController extends Controller
         
         // Update the notification data to show the approved message
         $notificationData = $notification->data;
-        $notificationData['message'] = 'An invitation has been sent for you to join the workspace: ' . $workspace->name . ' (Awaiting approval)';
+        $notificationData['message'] = 'You have joined the workspace: ' . $workspace->name . ' (Approved)';
         $notification->data = $notificationData;
         
         $notification->markAsRead();
 
-        return back()->with('success', '✅ Workspace invitation approved successfully! You now have access to the workspace.');
+        return redirect()->route('workspaces.share-index')
+            ->with('success', '✅ Workspace invitation approved successfully! You now have access to the workspace.');
     }
 
     /**

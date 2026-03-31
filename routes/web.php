@@ -54,9 +54,7 @@ Route::middleware('auth')->group(function () {
     
     // Project management routes
     Route::get('/workspaces/{workspace}/workspace', [WorkareaController::class, 'index'])->name('workspace.index');
-    Route::get('/workspaces/{workspace}/workspace-page', function (Workspace $workspace) {
-        return view('workspace.index', ['workspace' => $workspace]);
-    })->name('workspace.page');
+    Route::get('/workspaces/{workspace}/workspace-page', [WorkspaceController::class, 'show'])->name('workspace.page');
     Route::get('/workspaces/{workspace}/create', function (Workspace $workspace) {
         return view('workspace.create', ['workspace' => $workspace]);
     })->name('workspace.create');

@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\Folder;
 use App\Models\User;
 use App\Models\ProjectCollaborator;
+use App\Models\WorkspaceUser;
 use App\Notifications\ProjectAccessShare;
 use App\Notifications\ProjectRequestPending;
 use Illuminate\Http\Request;
@@ -34,32 +35,50 @@ class ProjectController extends Controller
     {
         // Allow access if user is the owner
         if ($project->isOwnedBy($request->user())) {
-            // Load root folders with their children
-            $folders = Folder::where('project_id', $project->id)
-                ->whereNull('parent_folder_id')
-                ->with('children')
-                ->get();
-
-            return view('project.show', compact('project', 'folders'));
+            return $this->loadProjectView($project);
         }
-        
-        // Check if user has approved access
+
+        // Check if user is a workspace admin/owner (read-only access)
+        if ($this->isWorkspaceAdmin($project, $request->user())) {
+            return $this->loadProjectView($project, true);
+        }
+
+        // Check if user has approved access as project collaborator
         $hasAccess = ProjectCollaborator::where('project_id', $project->id)
             ->where('user_id', $request->user()->id)
             ->where('status', 'approved')
             ->exists();
-            
+
         if (!$hasAccess) {
             abort(403, 'You do not have access to this project');
         }
 
-        // Load root folders with their children
+        return $this->loadProjectView($project);
+    }
+
+    /**
+     * Load project view with folders.
+     */
+    private function loadProjectView(Project $project, bool $readOnly = false)
+    {
         $folders = Folder::where('project_id', $project->id)
             ->whereNull('parent_folder_id')
             ->with('children')
             ->get();
 
-        return view('project.show', compact('project', 'folders'));
+        return view('project.show', compact('project', 'folders', 'readOnly'));
+    }
+
+    /**
+     * Check if user is a workspace admin or owner for this project.
+     */
+    private function isWorkspaceAdmin(Project $project, User $user): bool
+    {
+        return WorkspaceUser::where('workspace_id', $project->workspace_id)
+            ->where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->whereIn('role', ['owner', 'admin'])
+            ->exists();
     }
 
     public function share(Request $request, Project $project)
