@@ -187,119 +187,263 @@
 
                     <!-- Files -->
                     @foreach($files as $file)
-                        <div class="group bg-white dark:bg-gray-800 rounded-xl overflow-hidden hover:shadow-lg hover:scale-105 transition-all duration-300 border border-gray-200 dark:border-gray-700">
+                        <div class="group bg-white dark:bg-gray-800 rounded-xl overflow-hidden hover:shadow-xl hover:scale-105 transition-all duration-300 border border-gray-200 dark:border-gray-700">
                             @if($file['is_image'])
-                                <div class="relative h-32 cursor-pointer" onclick="openAssetPreview({{ $file['id'] }})">
-                                    <canvas data-image-src="/assets/{{ $file['id'] }}/thumbnail/medium" 
-                                            data-fallback-src="{{ $file['url'] }}"
-                                            data-file-name="{{ $file['name'] }}"
-                                            class="image-preview-canvas w-full h-full object-cover hover:opacity-90 transition-opacity"
-                                            width="300" height="200"></canvas>
-                                    <div class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black bg-opacity-40">
-                                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                        </svg>
+                                <div class="cursor-pointer" onclick="openAssetPreview({{ $file['id'] }})">
+                                    <!-- Product-style Image Card -->
+                                    <div class="relative h-40 bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                                        <img src="{{ $file['url'] }}" 
+                                             alt="{{ $file['name'] }}"
+                                             class="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        
+                                        <!-- Error Fallback -->
+                                        <div class="hidden w-full h-full bg-gray-200 dark:bg-gray-600 items-center justify-center">
+                                            <svg class="w-16 h-16 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/>
+                                            </svg>
+                                        </div>
+                                        
+                                        <!-- File Type Badge -->
+                                        <div class="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">
+                                            IMAGE
+                                        </div>
                                     </div>
-                                    <div class="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
-                                        Image
+                                    
+                                    <!-- Product Info Section -->
+                                    <div class="p-3">
+                                        <!-- Rating -->
+                                        <div class="flex items-center mb-1">
+                                            <div class="flex text-yellow-400 text-sm">
+                                                ★★★★★
+                                            </div>
+                                            <span class="text-xs text-gray-500 ml-1">4.5</span>
+                                        </div>
+                                        
+                                        <!-- File Name -->
+                                        <h3 class="text-sm font-semibold text-gray-800 dark:text-white mb-1 line-clamp-2" title="{{ $file['name'] }}">
+                                            {{ $file['name'] }}
+                                        </h3>
+                                        
+                                        <!-- Size Info -->
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="text-xs text-gray-500 line-through">Original</span>
+                                            <span class="text-xs font-semibold text-green-600 bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded">{{ $file['formatted_size'] }}</span>
+                                        </div>
+                                        
+                                        <!-- Action Buttons -->
+                                        <div class="flex gap-2 mt-2">
+                                            <button onclick="event.stopPropagation(); openAssetPreview({{ $file['id'] }})" 
+                                                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded transition-colors">
+                                                View
+                                            </button>
+                                            <a href="{{ $file['url'] }}" download 
+                                               onclick="event.stopPropagation()"
+                                               class="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium py-2 px-3 rounded transition-colors text-center">
+                                                Download
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             @elseif($file['is_video'])
-                                <div class="relative h-32 cursor-pointer" onclick="openAssetPreview({{ $file['id'] }})">
-                                    <img src="/assets/{{ $file['id'] }}/thumbnail/medium" alt="{{ $file['name'] }} thumbnail"
-                                         class="w-full h-full object-cover hover:opacity-90 transition-opacity"
-                                         onerror="this.src='data:image/svg+xml;base64,{{ base64_encode('<svg width="200" height="128" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="128" fill="%23dbeafe"/><rect width="200" height="128" fill="none" stroke="%233b82f6" stroke-width="2"/><g transform="translate(80, 44)" fill="%233b82f6"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/></g><text x="100" y="90" text-anchor="middle" fill="%231e40af" font-family="Arial" font-size="12">Video</text></svg>') }}'">
-                                    <div class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black bg-opacity-40">
-                                        <svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <div class="relative h-40 cursor-pointer" onclick="openAssetPreview({{ $file['id'] }})">
+                                    <!-- Video Thumbnail with Enhanced Styling -->
+                                    <div class="absolute inset-0 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30">
+                                        <img src="/assets/{{ $file['id'] }}/thumbnail/medium" alt="{{ $file['name'] }} thumbnail"
+                                             class="w-full h-full object-cover"
+                                             onerror="this.src='data:image/svg+xml;base64,{{ base64_encode('<svg width="300" height="240" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="240" fill="%23dbeafe"/><rect width="300" height="240" fill="none" stroke="%233b82f6" stroke-width="2"/><g transform="translate(120, 80)" fill="%233b82f6"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/></g><text x="150" y="150" text-anchor="middle" fill="%231e40af" font-family="Arial" font-size="14">Video</text></svg>') }}'">
+                                    </div>
+                                    
+                                    <!-- Play Button Overlay -->
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
+                                        <div class="absolute inset-0 flex items-center justify-center">
+                                            <div class="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-full p-4 transform scale-90 group-hover:scale-100 transition-transform duration-300">
+                                                <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- File Type Badge -->
+                                    <div class="absolute top-2 left-2 bg-gradient-to-r from-blue-500 to-cyan-600 text-white text-xs px-2 py-1 rounded-full font-medium shadow-lg">
+                                        <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
                                         </svg>
-                                    </div>
-                                    <div class="absolute top-2 right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
                                         Video
+                                    </div>
+                                    
+                                    <!-- Quick Actions -->
+                                    <div class="absolute top-2 right-2 flex opacity-0 group-hover:opacity-100 transition-opacity duration-300 space-x-1">
+                                        <button onclick="event.stopPropagation(); openAssetPreview({{ $file['id'] }})" 
+                                                class="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-lg p-1.5 hover:bg-white dark:hover:bg-gray-800 transition-colors shadow-lg"
+                                                title="Preview">
+                                            <svg class="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                        </button>
                                     </div>
                                 </div>
                             @else
-                                <div class="relative h-32 cursor-pointer" onclick="openAssetPreview({{ $file['id'] }})">
+                                <div class="relative h-40 cursor-pointer" onclick="openAssetPreview({{ $file['id'] }})">
                                     @if(str_contains($file['name'], '.pdf'))
-                                        <img src="/assets/{{ $file['id'] }}/thumbnail/medium" alt="{{ $file['name'] }} thumbnail"
-                                             class="w-full h-full object-cover hover:opacity-90 transition-opacity"
-                                             onerror="this.src='data:image/svg+xml;base64,{{ base64_encode('<svg width="200" height="128" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="128" fill="%23fee2e2"/><rect width="200" height="128" fill="none" stroke="%23ef4444" stroke-width="2"/><g transform="translate(80, 44)" fill="%23ef4444"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/></g><text x="100" y="90" text-anchor="middle" fill="%23991b1b" font-family="Arial" font-size="12">PDF</text></svg>') }}'">
-                                        <div class="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                                        <!-- PDF Document Card -->
+                                        <div class="absolute inset-0 bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900/30 dark:to-red-800/30">
+                                            <img src="/assets/{{ $file['id'] }}/thumbnail/medium" alt="{{ $file['name'] }} thumbnail"
+                                                 class="w-full h-full object-cover"
+                                                 onerror="this.src='data:image/svg+xml;base64,{{ base64_encode('<svg width="300" height="240" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="240" fill="%23fee2e2"/><rect width="300" height="240" fill="none" stroke="%23ef4444" stroke-width="2"/><g transform="translate(120, 80)" fill="%23ef4444"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/></g><text x="150" y="150" text-anchor="middle" fill="%23991b1b" font-family="Arial" font-size="14">PDF</text></svg>') }}'">
+                                        </div>
+                                        
+                                        <!-- Preview Overlay -->
+                                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
+                                            <div class="absolute inset-0 flex items-center justify-center">
+                                                <div class="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-full p-3 transform scale-90 group-hover:scale-100 transition-transform duration-300">
+                                                    <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- File Type Badge -->
+                                        <div class="absolute top-2 left-2 bg-gradient-to-r from-red-500 to-pink-600 text-white text-xs px-2 py-1 rounded-full font-medium shadow-lg">
+                                            <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
+                                            </svg>
                                             PDF
                                         </div>
+                                        
                                     @elseif(str_contains($file['name'], '.docx'))
-                                        <div class="w-full h-full bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-800/30 dark:to-blue-700/30 flex items-center justify-center hover:opacity-90 transition-opacity">
+                                        <!-- DOCX Document Card -->
+                                        <div class="absolute inset-0 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-700/30 flex items-center justify-center">
                                             <div class="text-center">
-                                                <svg class="w-12 h-12 text-blue-600 dark:text-blue-400 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                                                <svg class="w-16 h-16 text-blue-600 dark:text-blue-400 mx-auto mb-3" fill="currentColor" viewBox="0 0 20 20">
                                                     <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
                                                 </svg>
-                                                <div class="bg-blue-600 text-white text-xs px-2 py-1 rounded-full">DOCX</div>
+                                                <div class="bg-blue-600 text-white text-sm px-3 py-1 rounded-full font-medium">DOCX</div>
                                             </div>
                                         </div>
+                                        
+                                        <!-- Preview Overlay -->
+                                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
+                                            <div class="absolute inset-0 flex items-center justify-center">
+                                                <div class="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-full p-3 transform scale-90 group-hover:scale-100 transition-transform duration-300">
+                                                    <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- File Type Badge -->
+                                        <div class="absolute top-2 left-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs px-2 py-1 rounded-full font-medium shadow-lg">
+                                            <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
+                                            </svg>
+                                            DOCX
+                                        </div>
+                                        
                                     @else
-                                        <div class="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center hover:opacity-90 transition-opacity">
+                                        <!-- Generic File Card -->
+                                        <div class="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
                                             <div class="text-center">
-                                                <svg class="w-12 h-12 text-gray-600 dark:text-gray-400 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                                                <svg class="w-16 h-16 text-gray-600 dark:text-gray-400 mx-auto mb-3" fill="currentColor" viewBox="0 0 20 20">
                                                     <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
                                                 </svg>
-                                                <div class="bg-gray-600 text-white text-xs px-2 py-1 rounded-full">File</div>
+                                                <div class="bg-gray-600 text-white text-sm px-3 py-1 rounded-full font-medium">File</div>
                                             </div>
+                                        </div>
+                                        
+                                        <!-- Preview Overlay -->
+                                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
+                                            <div class="absolute inset-0 flex items-center justify-center">
+                                                <div class="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-full p-3 transform scale-90 group-hover:scale-100 transition-transform duration-300">
+                                                    <svg class="w-6 h-6 text-gray-600 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- File Type Badge -->
+                                        <div class="absolute top-2 left-2 bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs px-2 py-1 rounded-full font-medium shadow-lg">
+                                            <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
+                                            </svg>
+                                            File
                                         </div>
                                     @endif
-                                    <div class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black bg-opacity-40">
-                                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                        </svg>
+                                    
+                                    <!-- Quick Actions -->
+                                    <div class="absolute top-2 right-2 flex opacity-0 group-hover:opacity-100 transition-opacity duration-300 space-x-1">
+                                        <button onclick="event.stopPropagation(); openAssetPreview({{ $file['id'] }})" 
+                                                class="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-lg p-1.5 hover:bg-white dark:hover:bg-gray-800 transition-colors shadow-lg"
+                                                title="Preview">
+                                            <svg class="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                            </svg>
+                                        </button>
                                     </div>
                                 </div>
                             @endif
                             
-                            <div class="p-3">
-                                <p class="text-sm font-semibold text-gray-900 dark:text-white truncate mb-1" title="{{ $file['name'] }}">
-                                    {{ $file['name'] }}
-                                </p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">{{ $file['formatted_size'] }}</p>
-                            <div class="flex justify-center space-x-1 sm:space-x-2">
-                                <button onclick="openAssetPreview({{ $file['id'] }})"
-                                       class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors text-xs font-medium">
-                                    <svg class="w-3 h-3 mr-1 transition-all duration-200 hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <circle cx="12" cy="12" r="3" opacity="0.3">
-                                            <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite"/>
-                                            <animate attributeName="opacity" values="0.3;0.1;0.3" dur="2s" repeatCount="indefinite"/>
-                                        </circle>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                    </svg>
-                                    <span class="hidden sm:inline">Preview</span>
-                                </button>
-                                <a href="{{ $file['url'] }}" download 
-                                   class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors text-xs font-medium">
-                                    <svg class="w-3 h-3 mr-1 transition-transform duration-200 hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4">
-                                            <animateTransform attributeName="transform" type="translate" values="0,0; 0,1; 0,0" dur="2s" repeatCount="indefinite"/>
-                                        </path>
-                                    </svg>
-                                    <span class="hidden sm:inline">Download</span>
-                                </a>
+                            <div class="p-4 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="flex-1 min-w-0 pr-3">
+                                        <p class="text-sm font-semibold text-gray-900 dark:text-white truncate mb-1" title="{{ $file['name'] }}">
+                                            {{ $file['name'] }}
+                                        </p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+                                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                            </svg>
+                                            {{ $file['formatted_size'] }}
+                                        </p>
+                                    </div>
+                                    
+                                    <!-- Quick Actions -->
+                                    <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        <button onclick="openAssetPreview({{ $file['id'] }})" 
+                                                class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg p-2 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-all duration-200 hover:scale-110"
+                                                title="View">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                            </svg>
+                                        </button>
+                                        
+                                        <a href="{{ $file['url'] }}" download 
+                                           class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg p-2 hover:bg-green-200 dark:hover:bg-green-900/50 transition-all duration-200 hover:scale-110"
+                                           title="Download">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                            </svg>
+                                        </a>
+                                        
+                                        <form action="{{ route('folders.file.delete') }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this file?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <input type="hidden" name="path" value="{{ $file['file_path'] }}">
+                                            <button type="submit" 
+                                                    class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg p-2 hover:bg-red-200 dark:hover:bg-red-900/50 transition-all duration-200 hover:scale-110"
+                                                    title="Delete">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
                                 
-                                <form action="{{ route('folders.file.delete') }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this file?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <input type="hidden" name="path" value="{{ $file['file_path'] }}">
-                                    <button type="submit" 
-                                            class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors text-xs font-medium">
-                                        <svg class="w-3 h-3 mr-1 transition-all duration-200 hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-                                                <animate attributeName="stroke-opacity" values="0.6;1;0.6" dur="3s" repeatCount="indefinite"/>
-                                            </path>
-                                        </svg>
-                                        <span class="hidden sm:inline">Delete</span>
-                                    </button>
-                                </form>
+                                <!-- Action Labels -->
+                                <div class="flex justify-center space-x-2 text-xs">
+                                    <span class="text-blue-600 dark:text-blue-400 font-medium">View</span>
+                                    <span class="text-green-600 dark:text-green-400 font-medium">Download</span>
+                                    <span class="text-red-600 dark:text-red-400 font-medium">Delete</span>
+                                </div>
                             </div>
-                        </div>
                     </div>
                 @endforeach
                 </div>
