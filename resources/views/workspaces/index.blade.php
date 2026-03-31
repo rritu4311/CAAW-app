@@ -34,7 +34,7 @@
                         </div>
                     @endif
 
-                    <div class="space-y-6">
+                    <div class="space-y-3">
                         @if($workspaces->count() === 0)
                             <div class="col-span-full text-center py-12">
                                 <p class="text-gray-500 text-lg">
@@ -42,64 +42,68 @@
                                 </p>
                             </div>
                         @else
+                            <div class="space-y-3">
                             @foreach($workspaces as $workspace)
-                                <div class="group bg-white dark:bg-gray-700 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 ease-in-out p-6 border border-gray-200 dark:border-gray-600">
-                                    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                                        <div class="flex-1">
-                                            <div class="flex items-center justify-between mb-3">
-                                                <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 transition">
-                                                    <a href="{{ route('workspace.page', $workspace) }}" class="hover:text-blue-600">
-                                                        {{ $workspace->name }}
-                                                    </a>
-                                                </h3>
-                                                <div class="flex space-x-2">
-                                                    @if($workspace->isOwnedBy(auth()->user()))
-                                                        <form action="{{ route('workspaces.share', $workspace) }}" method="GET" class="inline">
-                                                            <button type="submit" 
-                                                                    class="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition"
-                                                                    title="Share Workspace">
-                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"/>
-                                                                </svg>
-                                                            </button>
-                                                        </form>
-                                                    @endif
-                                                    @if($workspace->isOwnedBy(auth()->user()))
-                                                        <form action="{{ route('workspaces.edit', $workspace) }}" method="GET" class="inline">
-                                                            <button type="submit" 
-                                                                    class="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition">
-                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                                                </svg>
-                                                            </button>
-                                                        </form>
-                                                    @endif
-                                                    @if($workspace->isOwnedBy(auth()->user()))
-                                                        <form action="{{ route('workspaces.destroy', $workspace) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this workspace?')">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" 
-                                                                    class="bg-red-600 text-white p-2 rounded hover:bg-red-700 transition">
-                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                                                </svg>
-                                                            </button>
-                                                        </form>
-                                                    @endif
-                                                </div>
-                                            </div>
+                                @php
+                                    $isWorkspaceAdmin = \App\Models\WorkspaceUser::where('workspace_id', $workspace->id)
+                                        ->where('user_id', auth()->id())
+                                        ->where('status', 'approved')
+                                        ->where('role', 'admin')
+                                        ->exists();
+                                @endphp
+                                <div class="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow cursor-pointer" onclick="window.location='{{ route('workspace.page', $workspace) }}'">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                                {{ $workspace->name }}
+                                            </h3>
                                             <p class="text-sm text-gray-500 dark:text-gray-400">
                                                 Created: {{ $workspace->created_at->format('M d, Y') }}
+                                                @if(auth()->user()->id !== $workspace->owner_id)
+                                                    | Owner: {{ $workspace->owner->name }}
+                                                @endif
                                             </p>
-                                            @if(auth()->user()->id !== $workspace->owner_id)
-                                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                                    Owner: {{ $workspace->owner->name }}
-                                                </p>
-                                            @endif
                                         </div>
+                                    </div>
+                                    <div class="flex space-x-2" onclick="event.stopPropagation()">
+                                    @if($workspace->isOwnedBy(auth()->user()) || $isWorkspaceAdmin)
+                                        <a href="{{ route('workspaces.share', $workspace) }}" 
+                                           class="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition"
+                                           title="Share Workspace">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"/>
+                                            </svg>
+                                        </a>
+                                    @endif
+                                        @if($workspace->isOwnedBy(auth()->user()))
+                                            <a href="{{ route('workspaces.edit', $workspace) }}" 
+                                               class="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                </svg>
+                                            </a>
+                                        @endif
+                                        @if($workspace->isOwnedBy(auth()->user()))
+                                            <form action="{{ route('workspaces.destroy', $workspace) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this workspace?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" 
+                                                        class="bg-red-600 text-white p-2 rounded hover:bg-red-700 transition">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                    </svg>
+                                                </button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </div>
                             @endforeach
+                            </div>
                         @endif
                     </div>
                 </div>

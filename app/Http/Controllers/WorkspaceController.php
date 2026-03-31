@@ -54,6 +54,13 @@ class WorkspaceController extends Controller
         // Check if user is owner
         $isOwner = $workspace->isOwnedBy($request->user());
         
+        // Check if user has 'user' role in workspace
+        $isWorkspaceUser = WorkspaceUser::where('workspace_id', $workspace->id)
+            ->where('user_id', $request->user()->id)
+            ->where('status', 'approved')
+            ->where('role', 'user')
+            ->exists();
+        
         // Check if user has approved access
         $hasAccess = WorkspaceUser::where('workspace_id', $workspace->id)
             ->where('user_id', $request->user()->id)
@@ -64,7 +71,7 @@ class WorkspaceController extends Controller
             abort(403, 'You do not have access to this workspace');
         }
 
-        return view('workspace.index', compact('workspace', 'isOwner'));
+        return view('workspace.index', compact('workspace', 'isOwner', 'isWorkspaceUser'));
     }
 
     public function update(Request $request, Workspace $workspace)
@@ -141,8 +148,15 @@ class WorkspaceController extends Controller
         try {
             $validated = $request->validate([
                 'email' => 'required|email|exists:users,email',
-                'role' => 'required|in:member,admin'
+                'role' => 'required|in:user,admin'
             ]);
+
+            // Only workspace owner can invite admins
+            if ($validated['role'] === 'admin' && !$workspace->isOwnedBy($request->user())) {
+                return redirect()->back()
+                    ->withErrors(['role' => 'Only the workspace owner can invite admins'])
+                    ->withInput();
+            }
 
             $user = User::where('email', $validated['email'])->first();            
             // Check if user is already a member (approved)

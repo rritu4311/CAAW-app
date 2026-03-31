@@ -16,7 +16,7 @@
                                 <span class="font-bold text-xl">{{ $workspace->name }}</span>
                             </p>
                         </div>
-                        @if(!$isOwner)
+                        @if(!$isOwner || $isWorkspaceUser)
                         <a href="{{ route('workspace.create', $workspace) }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
                             Create Project
                         </a>
@@ -64,7 +64,7 @@
                                                             {{ $pendingCount }} pending
                                                         </span>
                                                     @endif
-                                                    @if($isOwner)
+                                                    @if($isOwner || $isWorkspaceUser)
                                                     <form action="{{ route('workspace.edit', [$workspace, $project]) }}" method="GET" class="inline">
                                                         <button type="submit" 
                                                                 class="bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white p-2 rounded transition duration-200 border border-blue-700 dark:border-blue-600"

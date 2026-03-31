@@ -43,6 +43,11 @@ class ProjectController extends Controller
             return $this->loadProjectView($project, true);
         }
 
+        // Check if user is a workspace user with 'user' role (full access)
+        if ($this->isWorkspaceUser($project, $request->user())) {
+            return $this->loadProjectView($project);
+        }
+
         // Check if user has approved access as project collaborator
         $hasAccess = ProjectCollaborator::where('project_id', $project->id)
             ->where('user_id', $request->user()->id)
@@ -78,6 +83,18 @@ class ProjectController extends Controller
             ->where('user_id', $user->id)
             ->where('status', 'approved')
             ->whereIn('role', ['owner', 'admin'])
+            ->exists();
+    }
+
+    /**
+     * Check if user is a workspace user with 'user' role for this project.
+     */
+    private function isWorkspaceUser(Project $project, User $user): bool
+    {
+        return WorkspaceUser::where('workspace_id', $project->workspace_id)
+            ->where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->where('role', 'user')
             ->exists();
     }
 

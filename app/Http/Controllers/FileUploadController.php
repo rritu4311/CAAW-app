@@ -786,6 +786,17 @@ class FileUploadController extends Controller
             return true;
         }
 
+        // Check if user is a workspace member with 'user' role (not admin)
+        $workspaceUser = \App\Models\WorkspaceUser::where('workspace_id', $project->workspace_id)
+            ->where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->where('role', 'user')
+            ->exists();
+
+        if ($workspaceUser) {
+            return true;
+        }
+
         // Workspace admins only have read access, NOT write access
         return false;
     }

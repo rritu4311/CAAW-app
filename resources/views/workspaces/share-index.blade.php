@@ -35,34 +35,31 @@
                                     Pending Invitations ({{ $pendingWorkspaces->count() }})
                                 </span>
                             </h2>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div class="space-y-3">
                                 @foreach($pendingWorkspaces as $workspace)
-                                    <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
-                                        <div class="flex items-center justify-between mb-4">
-                                            <div class="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
+                                    <div class="flex items-center justify-between p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                                        <div class="flex items-center space-x-4">
+                                            <div class="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center flex-shrink-0">
                                                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                                                 </svg>
                                             </div>
-                                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                                                Pending
-                                            </span>
+                                            <div>
+                                                <div class="flex items-center gap-3 mb-1">
+                                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                                        {{ $workspace->name }}
+                                                    </h3>
+                                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                                        Pending
+                                                    </span>
+                                                </div>
+                                                <p class="text-sm text-gray-600 dark:text-gray-400">
+                                                    Invited by {{ $workspace->owner->name }} - Waiting for your approval
+                                                </p>
+                                            </div>
                                         </div>
-                                        
-                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                                            {{ $workspace->name }}
-                                        </h3>
-                                        
-                                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                                            Invited by {{ $workspace->owner->name }}
-                                        </p>
-                                        
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                                            Waiting for your approval
-                                        </p>
-                                        
                                         <a href="{{ route('notifications.index') }}" 
-                                           class="block w-full bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 text-center">
+                                           class="bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 whitespace-nowrap">
                                             View Invitation
                                         </a>
                                     </div>
@@ -98,55 +95,48 @@
                                 </h2>
                             </div>
                         @endif
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="space-y-3">
                             @foreach($workspaces as $workspace)
                                 @php
                                     $workspaceUser = $workspace->workspaceUsers->where('user_id', auth()->user()->id)->first();
                                     $userRole = $workspaceUser ? $workspaceUser->role : 'member';
                                 @endphp
-                                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 hover:shadow-lg transition-shadow duration-200">
-                                    <div class="flex items-center justify-between mb-4">
-                                        <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                                <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow duration-200 cursor-pointer" onclick="window.location='{{ route('workspaces.show', $workspace) }}'">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
                                             <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                                             </svg>
                                         </div>
-                                        <span class="px-2 py-1 text-xs font-medium rounded-full
-                                            {{ $userRole === 'admin' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 
-                                               'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200' }}">
-                                            {{ ucfirst($userRole) }}
-                                        </span>
-                                    </div>
-                                    
-                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                                        {{ $workspace->name }}
-                                    </h3>
-                                    
-                                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                                        Shared by {{ $workspace->owner->name }}
-                                    </p>
-                                    
-                                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                                        Created {{ $workspace->created_at->diffForHumans() }}
-                                    </p>
-                                    
-                                    <div class="flex items-center justify-between mb-4">
-                                        <div class="text-sm text-gray-500 dark:text-gray-400">
-                                            <span class="font-medium">{{ $workspace->workspaceUsers->where('status', 'approved')->count() }}</span>
-                                            members
-                                        </div>
-                                        <div class="text-sm text-gray-500 dark:text-gray-400">
-                                            <span class="font-medium">{{ $workspace->projects->count() }}</span>
-                                            projects
+                                        <div>
+                                            <div class="flex items-center gap-3 mb-1">
+                                                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                                    {{ $workspace->name }}
+                                                </h3>
+                                                <span class="px-2 py-1 text-xs font-medium rounded-full
+                                                    {{ $userRole === 'admin' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 
+                                                       'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200' }}">
+                                                    {{ ucfirst($userRole) }}
+                                                </span>
+                                            </div>
+                                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                                Shared by {{ $workspace->owner->name }} - Created {{ $workspace->created_at->diffForHumans() }}
+                                            </p>
+                                            <div class="flex items-center gap-4 mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                                <span><span class="font-medium">{{ $workspace->workspaceUsers->where('status', 'approved')->count() }}</span> members</span>
+                                                <span><span class="font-medium">{{ $workspace->projects->count() }}</span> projects</span>
+                                            </div>
                                         </div>
                                     </div>
-                                    
-                                    <div class="flex space-x-2">
-                                        <a href="{{ route('workspaces.show', $workspace) }}" 
-                                           class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 text-center">
-                                            Open Workspace
+                                    @if($userRole === 'admin')
+                                        <a href="{{ route('workspaces.share', $workspace) }}" onclick="event.stopPropagation()"
+                                           class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200"
+                                           title="Share Workspace">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"/>
+                                            </svg>
                                         </a>
-                                    </div>
+                                    @endif
                                 </div>
                             @endforeach
                         </div>

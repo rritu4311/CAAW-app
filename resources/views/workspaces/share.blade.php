@@ -10,7 +10,10 @@
             <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white dark:bg-gray-800">
                     <div class="mb-6">
-                        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-3">
+                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"/>
+                            </svg>
                             Share "{{ $workspace->name }}"
                         </h1>
                         <p class="text-gray-600 dark:text-gray-400">
@@ -52,8 +55,10 @@
                                 <div>
                                     <select name="role" 
                                             class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white">
-                                        <option value="member">Member</option>
-                                        <option value="admin">Admin</option>
+                                        @if($workspace->isOwnedBy(auth()->user()))
+                                            <option value="admin">Admin</option>
+                                        @endif
+                                        <option value="user">User</option>
                                     </select>
                                 </div>
                                 <button type="submit" 
@@ -65,9 +70,18 @@
                     </div>
 
                     <!-- Current Approved Members -->
+                    @php
+                        $isOwner = $workspace->isOwnedBy(auth()->user());
+                    @endphp
                     <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 mb-6">
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                            Current Members ({{ $approvedMembers->count()-1 }})
+                            Current Members ({{
+                                $approvedMembers->filter(function($m) use ($workspace, $isOwner) {
+                                    if ($m->user->id === $workspace->owner_id) return false;
+                                    if (!$isOwner && $m->role === 'admin') return false;
+                                    return true;
+                                })->count()
+                            }})
                         </h3>
                         @if($approvedMembers->count() === 0)
                             <p class="text-gray-500 dark:text-gray-400">
@@ -77,6 +91,9 @@
                             <div class="space-y-3">
                                 @foreach($approvedMembers as $memberRecord)
                                     @if($memberRecord->user->id === $workspace->owner_id)
+                                        @continue
+                                    @endif
+                                    @if(!$isOwner && $memberRecord->role === 'admin')
                                         @continue
                                     @endif
                                     <div class="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
