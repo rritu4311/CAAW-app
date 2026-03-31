@@ -25,7 +25,7 @@ class WorkspaceController extends Controller
     {
         try {
             $validated = $request->validate([
-                'name' => 'required|string|max:255'
+                'name' => 'required|string|max:255|unique:workspaces,name,NULL,id,owner_id,' . $request->user()->id
             ]);
 
             $validated['owner_id'] = $request->user()->id;
@@ -82,7 +82,7 @@ class WorkspaceController extends Controller
 
         try {
             $validated = $request->validate([
-                'name' => 'required|string|max:255'
+                'name' => 'required|string|max:255|unique:workspaces,name,' . $workspace->id . ',id,owner_id,' . $request->user()->id
             ]);
 
             $workspace->update($validated);

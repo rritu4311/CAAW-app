@@ -33,7 +33,7 @@ class WorkareaController extends Controller
 
         try {
             $validated = $request->validate([
-                'name' => 'required|string|max:255',
+                'name' => 'required|string|max:255|unique:projects,name,NULL,id,workspace_id,' . $workspace->id,
                 'client_name' => 'nullable|string|max:255',
                 'description' => 'nullable|string',
                 'deadline' => 'nullable|date|after_or_equal:today'
@@ -79,7 +79,7 @@ class WorkareaController extends Controller
 
         try {
             $validated = $request->validate([
-                'name' => 'required|string|max:255',
+                'name' => 'required|string|max:255|unique:projects,name,' . $project->id . ',id,workspace_id,' . $workspace->id,
                 'client_name' => 'nullable|string|max:255',
                 'description' => 'nullable|string',
                 'deadline' => 'nullable|date|after_or_equal:today'
