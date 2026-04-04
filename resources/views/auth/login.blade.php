@@ -1,47 +1,114 @@
-<x-guest-layout>
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <form method="POST" action="{{ route('login') }}">
-        @csrf
+    <title>{{ config('app.name', 'Laravel') }}</title>
 
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" 
+          rel="stylesheet">
+
+    <!-- Font Awesome (for eye icon) -->
+    <link rel="stylesheet" 
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+</head>
+<div class="container-fluid vh-100 p-0">
+
+    <div class="row g-0 h-100">
+
+        <!-- LEFT SIDE (IMAGE - 50%) -->
+        <div class="col-md-6 h-100">
+            <img src="https://ied.eu/wp-content/uploads/2018/10/ERP-Business-Intelligence-Wallpaper.png"
+                 class="w-100 h-100"
+                 style="object-fit: cover;">
         </div>
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
+        <!-- RIGHT SIDE (FORM - 50%) -->
+        <div class="col-md-6 d-flex align-items-center justify-content-center bg-white h-100">
 
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="current-password" />
+            <div style="width: 100%; max-width: 420px;">
 
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
+                <!-- TITLE -->
+                <h2 class="text-center fw-bold mb-2">CAAW</h2>
+                <p class="text-center text-muted mb-4">
+                    Content & Asset Approval Workflow Tool
+                </p>
+
+                <form method="POST" action="{{ route('login') }}">
+                    @csrf
+
+                    <!-- EMAIL -->
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email"
+                               class="form-control form-control-lg"
+                               placeholder="Enter your email" required>
+                    </div>
+
+                    <!-- PASSWORD -->
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <div class="input-group">
+                            <input id="password" type="password" name="password"
+                                   class="form-control form-control-lg"
+                                   placeholder="Enter your password" required>
+                            <button type="button" onclick="togglePassword()" class="btn btn-outline-secondary">
+                                <i id="eye-icon" class="fa fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- REMEMBER + FORGOT -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="remember">
+                            <label class="form-check-label">
+                                Remember me
+                            </label>
+                        </div>
+
+                        <a href="{{ route('password.request') }}" class="text-decoration-none">
+                            Forgot password?
+                        </a>
+                    </div>
+
+                    <!-- BUTTON -->
+                    <button type="submit" class="btn btn-danger w-100 py-3 fw-semibold">
+                        Login
+                    </button>
+
+                </form>
+
+                <!-- REGISTER -->
+                <p class="mt-4 text-center">
+                    Don't have an account?
+                    <a href="{{ route('register') }}" class="fw-semibold text-decoration-none">
+                        Create one
+                    </a>
+                </p>
+
+            </div>
+
         </div>
 
-        <!-- Remember Me -->
-        <div class="block mt-4">
-            <label for="remember_me" class="inline-flex items-center">
-                <input id="remember_me" type="checkbox" class="rounded dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-indigo-600 shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:focus:ring-offset-gray-800" name="remember">
-                <span class="ms-2 text-sm text-gray-600 dark:text-gray-400">{{ __('Remember me') }}</span>
-            </label>
-        </div>
+    </div>
 
-        <div class="flex items-center justify-end mt-4">
-            @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800" href="{{ route('password.request') }}">
-                    {{ __('Forgot your password?') }}
-                </a>
-            @endif
+</div>
 
-            <x-primary-button class="ms-3">
-                {{ __('Log in') }}
-            </x-primary-button>
-        </div>
-    </form>
-</x-guest-layout>
+<script>
+function togglePassword() {
+    const password = document.getElementById("password");
+    const icon = document.getElementById("eye-icon");
+
+    if (password.type === "password") {
+        password.type = "text";
+        icon.classList.replace("fa-eye", "fa-eye-slash");
+    } else {
+        password.type = "password";
+        icon.classList.replace("fa-eye-slash", "fa-eye");
+    }
+}
+</script>

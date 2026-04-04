@@ -51,27 +51,25 @@ class WorkspaceController extends Controller
 
     public function show(Request $request, Workspace $workspace)
     {
+        $user = $request->user();
+
         // Check if user is owner
-        $isOwner = $workspace->isOwnedBy($request->user());
-        
-        // Check if user has 'user' role in workspace
-        $isWorkspaceUser = WorkspaceUser::where('workspace_id', $workspace->id)
-            ->where('user_id', $request->user()->id)
-            ->where('status', 'approved')
-            ->where('role', 'user')
-            ->exists();
-        
+        $isOwner = $workspace->isOwnedBy($user);
+
+        // Check if user is admin
+        $isAdmin = $workspace->userHasRole($user, ['admin']);
+
+        // Check if user has 'user' or 'member' role in workspace
+        $isWorkspaceUser = $workspace->userHasRole($user, ['user', 'member']);
+
         // Check if user has approved access
-        $hasAccess = WorkspaceUser::where('workspace_id', $workspace->id)
-            ->where('user_id', $request->user()->id)
-            ->where('status', 'approved')
-            ->exists();
-            
+        $hasAccess = $workspace->userHasRole($user, ['admin', 'user', 'member']);
+
         if (!$isOwner && !$hasAccess) {
             abort(403, 'You do not have access to this workspace');
         }
 
-        return view('workspace.index', compact('workspace', 'isOwner', 'isWorkspaceUser'));
+        return view('workspace.index', compact('workspace', 'isOwner', 'isAdmin', 'isWorkspaceUser'));
     }
 
     public function update(Request $request, Workspace $workspace)
@@ -246,6 +244,45 @@ class WorkspaceController extends Controller
 
         return redirect()->route('workspaces.share', $workspace)
             ->with('success', 'Member removed successfully');
+    }
+
+    public function updateMemberRole(Request $request, Workspace $workspace, User $user)
+    {
+        if (!$this->hasAdminAccess($workspace, $request->user())) {
+            abort(403);
+        }
+
+        // Prevent editing the owner
+        if ($workspace->owner_id === $user->id) {
+            abort(403, 'Cannot change the workspace owner role');
+        }
+
+        // Only workspace owner can assign admin role
+        if (!$workspace->isOwnedBy($request->user())) {
+            $targetUser = WorkspaceUser::where('workspace_id', $workspace->id)
+                ->where('user_id', $user->id)
+                ->first();
+            if ($targetUser && $targetUser->role === 'admin') {
+                abort(403, 'Only the workspace owner can change admin roles');
+            }
+        }
+
+        $validated = $request->validate([
+            'role' => 'required|in:user,admin'
+        ]);
+
+        // Only owner can set admin role
+        if ($validated['role'] === 'admin' && !$workspace->isOwnedBy($request->user())) {
+            return redirect()->back()
+                ->withErrors(['role' => 'Only the workspace owner can assign admin role']);
+        }
+
+        WorkspaceUser::where('workspace_id', $workspace->id)
+            ->where('user_id', $user->id)
+            ->update(['role' => $validated['role']]);
+
+        return redirect()->route('workspaces.share', $workspace)
+            ->with('success', 'Member role updated successfully');
     }
 
     /**

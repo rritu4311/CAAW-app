@@ -767,38 +767,12 @@ class FileUploadController extends Controller
     }
 
     /**
-     * Check if user has write access to project (owner or collaborator, NOT workspace admin).
+     * Check if user has write access to project (owner or admin only).
+     * Reviewers and viewers do NOT have write access.
      */
     private function hasWriteAccess(Project $project, $user): bool
     {
-        // Project owner always has write access
-        if ($project->isOwnedBy($user)) {
-            return true;
-        }
-
-        // Check if user is a project collaborator
-        $isCollaborator = \App\Models\ProjectCollaborator::where('project_id', $project->id)
-            ->where('user_id', $user->id)
-            ->where('status', 'approved')
-            ->exists();
-
-        if ($isCollaborator) {
-            return true;
-        }
-
-        // Check if user is a workspace member with 'user' role (not admin)
-        $workspaceUser = \App\Models\WorkspaceUser::where('workspace_id', $project->workspace_id)
-            ->where('user_id', $user->id)
-            ->where('status', 'approved')
-            ->where('role', 'user')
-            ->exists();
-
-        if ($workspaceUser) {
-            return true;
-        }
-
-        // Workspace admins only have read access, NOT write access
-        return false;
+        return $project->canUserUpload($user);
     }
 
     /**

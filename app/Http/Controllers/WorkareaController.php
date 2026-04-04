@@ -11,23 +11,26 @@ class WorkareaController extends Controller
 {
     public function index(Request $request, Workspace $workspace)
     {
-        if (!$workspace->isOwnedBy($request->user())) {
+        $user = $request->user();
+
+        // Check if user has access to this workspace
+        if (!$workspace->isOwnedBy($user) && !$workspace->userHasRole($user, ['admin', 'user', 'member'])) {
             abort(403);
         }
 
-        return view('workspace.index', compact('workspace'));
+        $isOwner = $workspace->isOwnedBy($user);
+        $isAdmin = $workspace->userHasRole($user, ['admin']);
+        $isWorkspaceUser = $workspace->userHasRole($user, ['user', 'member']);
+
+        return view('workspace.index', compact('workspace', 'isOwner', 'isAdmin', 'isWorkspaceUser'));
     }
 
     public function store(Request $request, Workspace $workspace)
     {
-        // Allow owner or workspace 'user' role members to create projects
-        $isWorkspaceUser = \App\Models\WorkspaceUser::where('workspace_id', $workspace->id)
-            ->where('user_id', $request->user()->id)
-            ->where('status', 'approved')
-            ->where('role', 'user')
-            ->exists();
-            
-        if (!$workspace->isOwnedBy($request->user()) && !$isWorkspaceUser) {
+        $user = $request->user();
+
+        // Owner, Admin, and User can create projects
+        if (!$workspace->canUserCreateProject($user)) {
             abort(403);
         }
 
@@ -56,7 +59,10 @@ class WorkareaController extends Controller
 
     public function show(Request $request, Workspace $workspace, Project $project)
     {
-        if (!$workspace->isOwnedBy($request->user()) || $project->workspace_id !== $workspace->id) {
+        $user = $request->user();
+
+        // All workspace members can view projects
+        if (!$workspace->canUserViewProjects($user) || $project->workspace_id !== $workspace->id) {
             abort(403);
         }
 
@@ -66,14 +72,14 @@ class WorkareaController extends Controller
     
     public function update(Request $request, Workspace $workspace, Project $project)
     {
-        // Allow owner or workspace 'user' role members to edit projects
-        $isWorkspaceUser = \App\Models\WorkspaceUser::where('workspace_id', $workspace->id)
-            ->where('user_id', $request->user()->id)
-            ->where('status', 'approved')
-            ->where('role', 'user')
-            ->exists();
-            
-        if ((!$workspace->isOwnedBy($request->user()) && !$isWorkspaceUser) || $project->workspace_id !== $workspace->id) {
+        $user = $request->user();
+
+        // Owner: can edit any project
+        // Admin: read-only (cannot edit projects)
+        // User: can edit own projects only
+        $canEdit = $workspace->isOwnedBy($user) || $project->isOwnedBy($user);
+
+        if (!$canEdit || $project->workspace_id !== $workspace->id) {
             abort(403);
         }
 
@@ -99,14 +105,14 @@ class WorkareaController extends Controller
 
     public function destroy(Request $request, Workspace $workspace, Project $project)
     {
-        // Allow owner or workspace 'user' role members to delete projects
-        $isWorkspaceUser = \App\Models\WorkspaceUser::where('workspace_id', $workspace->id)
-            ->where('user_id', $request->user()->id)
-            ->where('status', 'approved')
-            ->where('role', 'user')
-            ->exists();
-            
-        if ((!$workspace->isOwnedBy($request->user()) && !$isWorkspaceUser) || $project->workspace_id !== $workspace->id) {
+        $user = $request->user();
+
+        // Owner: can delete any project
+        // Admin: read-only (cannot delete projects)
+        // User: can delete own projects only
+        $canDelete = $workspace->isOwnedBy($user) || $project->isOwnedBy($user);
+
+        if (!$canDelete || $project->workspace_id !== $workspace->id) {
             abort(403);
         }
 

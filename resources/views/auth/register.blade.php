@@ -1,52 +1,134 @@
-<x-guest-layout>
-    <form method="POST" action="{{ route('register') }}">
-        @csrf
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        <!-- Name -->
-        <div>
-            <x-input-label for="name" :value="__('Name')" />
-            <x-text-input id="name" class="block mt-1 w-full" type="text" name="name" :value="old('name')" required autofocus autocomplete="name" />
-            <x-input-error :messages="$errors->get('name')" class="mt-2" />
+    <title>{{ config('app.name', 'Laravel') }} - Register</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" 
+          rel="stylesheet">
+
+    <!-- Font Awesome (for eye icon) -->
+    <link rel="stylesheet" 
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+</head>
+<body class="bg-light">
+<div class="container-fluid vh-100 p-0">
+
+    <div class="row g-0 h-100">
+
+        <!-- LEFT SIDE (IMAGE - 50%) -->
+        <div class="col-md-6 h-100">
+            <img src="https://ied.eu/wp-content/uploads/2018/10/ERP-Business-Intelligence-Wallpaper.png"
+                 class="w-100 h-100"
+                 style="object-fit: cover;">
         </div>
 
-        <!-- Email Address -->
-        <div class="mt-4">
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+        <!-- RIGHT SIDE (FORM - 50%) -->
+        <div class="col-md-6 d-flex align-items-center justify-content-center bg-white h-100">
+
+            <div style="width: 100%; max-width: 420px;">
+
+                <!-- TITLE -->
+                <h2 class="text-center fw-bold mb-2">CAAW</h2>
+                <p class="text-center text-muted mb-4">
+                    Create Your Account
+                </p>
+
+                <form method="POST" action="{{ route('register') }}">
+                    @csrf
+
+                    <!-- NAME -->
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" name="name" value="{{ old('name') }}"
+                               class="form-control form-control-lg @error('name') is-invalid @enderror"
+                               placeholder="Enter your name" required autofocus autocomplete="name">
+                        @error('name')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <!-- EMAIL -->
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" value="{{ old('email') }}"
+                               class="form-control form-control-lg @error('email') is-invalid @enderror"
+                               placeholder="Enter your email" required autocomplete="username">
+                        @error('email')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <!-- PASSWORD -->
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <div class="input-group">
+                            <input id="password" type="password" name="password"
+                                   class="form-control form-control-lg @error('password') is-invalid @enderror"
+                                   placeholder="Enter your password" required autocomplete="new-password">
+                            <button type="button" onclick="togglePassword('password', 'eye-icon')" class="btn btn-outline-secondary">
+                                <i id="eye-icon" class="fa fa-eye"></i>
+                            </button>
+                        </div>
+                        @error('password')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <!-- CONFIRM PASSWORD -->
+                    <div class="mb-4">
+                        <label class="form-label">Confirm Password</label>
+                        <div class="input-group">
+                            <input id="password_confirmation" type="password" name="password_confirmation"
+                                   class="form-control form-control-lg"
+                                   placeholder="Confirm your password" required autocomplete="new-password">
+                            <button type="button" onclick="togglePassword('password_confirmation', 'eye-icon-confirm')" class="btn btn-outline-secondary">
+                                <i id="eye-icon-confirm" class="fa fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- BUTTON -->
+                    <button type="submit" class="btn btn-danger w-100 py-3 fw-semibold mb-3">
+                        Register
+                    </button>
+
+                </form>
+
+                <!-- LOGIN LINK -->
+                <p class="text-center mb-0">
+                    Already have an account?
+                    <a href="{{ route('login') }}" class="fw-semibold text-decoration-none">
+                        Login
+                    </a>
+                </p>
+
+            </div>
+
         </div>
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
+    </div>
 
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="new-password" />
+</div>
 
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
+<script>
+function togglePassword(inputId, iconId) {
+    const password = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
 
-        <!-- Confirm Password -->
-        <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
+    if (password.type === "password") {
+        password.type = "text";
+        icon.classList.replace("fa-eye", "fa-eye-slash");
+    } else {
+        password.type = "password";
+        icon.classList.replace("fa-eye-slash", "fa-eye");
+    }
+}
+</script>
 
-            <x-text-input id="password_confirmation" class="block mt-1 w-full"
-                            type="password"
-                            name="password_confirmation" required autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            <a class="underline text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800" href="{{ route('login') }}">
-                {{ __('Already registered?') }}
-            </a>
-
-            <x-primary-button class="ms-4">
-                {{ __('Register') }}
-            </x-primary-button>
-        </div>
-    </form>
-</x-guest-layout>
+</body>
+</html>

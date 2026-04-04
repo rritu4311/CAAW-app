@@ -43,4 +43,58 @@ class Workspace extends Model
     {
         return $this->owner_id === $user->id;
     }
+
+    /**
+     * Get the workspace user record for a specific user.
+     */
+    public function getWorkspaceUser(User $user): ?WorkspaceUser
+    {
+        return $this->workspaceUsers()
+            ->where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->first();
+    }
+
+    /**
+     * Check if user has a specific role in this workspace.
+     */
+    public function userHasRole(User $user, array $roles): bool
+    {
+        // Owner has full access
+        if (in_array('owner', $roles) && $this->isOwnedBy($user)) {
+            return true;
+        }
+
+        $workspaceUser = $this->getWorkspaceUser($user);
+        if (!$workspaceUser) {
+            return false;
+        }
+
+        return in_array($workspaceUser->role, $roles);
+    }
+
+    /**
+     * Check if user can manage workspace users (Owner or Admin).
+     */
+    public function canUserManageMembers(User $user): bool
+    {
+        return $this->userHasRole($user, ['owner', 'admin']);
+    }
+
+    /**
+     * Check if user can create projects (Owner, Admin, or User).
+     */
+    public function canUserCreateProject(User $user): bool
+    {
+        return $this->userHasRole($user, ['owner', 'admin', 'user']);
+    }
+
+    /**
+     * Check if user can view all projects (Owner, Admin - full access).
+     * Regular users can only view but with limited management.
+     */
+    public function canUserViewProjects(User $user): bool
+    {
+        return $this->userHasRole($user, ['owner', 'admin', 'user']);
+    }
 }

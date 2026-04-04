@@ -52,9 +52,10 @@
                                 <div>
                                     <select name="role" 
                                             class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white">
-                                        <option value="viewer">Viewer</option>
-                                        <option value="reviewer">Reviewer</option>
+                                        <option value="owner">Owner</option>
                                         <option value="admin">Admin</option>
+                                        <option value="reviewer">Reviewer</option>
+                                        <option value="viewer">Viewer</option>
                                     </select>
                                 </div>
                                 <button type="submit" 
@@ -190,6 +191,16 @@
                                             <span class="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
                                                 Rejected
                                             </span>
+                                            <form action="{{ route('projects.remove-collaborator', $request) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this rejected invitation?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" 
+                                                        class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                    </svg>
+                                                </button>
+                                            </form>
                                         </div>
                                     </div>
                                 @endforeach

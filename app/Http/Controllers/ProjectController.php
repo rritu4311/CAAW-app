@@ -33,32 +33,17 @@ class ProjectController extends Controller
 
     public function show(Request $request, Project $project)
     {
-        // Allow access if user is the owner
-        if ($project->isOwnedBy($request->user())) {
-            return $this->loadProjectView($project);
-        }
+        $user = $request->user();
 
-        // Check if user is a workspace admin/owner (read-only access)
-        if ($this->isWorkspaceAdmin($project, $request->user())) {
-            return $this->loadProjectView($project, true);
-        }
-
-        // Check if user is a workspace user with 'user' role (full access)
-        if ($this->isWorkspaceUser($project, $request->user())) {
-            return $this->loadProjectView($project);
-        }
-
-        // Check if user has approved access as project collaborator
-        $hasAccess = ProjectCollaborator::where('project_id', $project->id)
-            ->where('user_id', $request->user()->id)
-            ->where('status', 'approved')
-            ->exists();
-
-        if (!$hasAccess) {
+        // Allow access if user has any project access (owner or approved collaborator)
+        if (!$user->canViewProject($project)) {
             abort(403, 'You do not have access to this project');
         }
 
-        return $this->loadProjectView($project);
+        // Determine read-only access (viewers have read-only, others can interact)
+        $readOnly = !$user->canCommentOnProject($project);
+
+        return $this->loadProjectView($project, $readOnly);
     }
 
     /**
@@ -100,7 +85,7 @@ class ProjectController extends Controller
 
     public function share(Request $request, Project $project)
     {
-        if (!$project->isOwnedBy($request->user())) {
+        if (!$request->user()->canManageCollaborators($project)) {
             abort(403);
         }
 
@@ -130,14 +115,14 @@ class ProjectController extends Controller
 
     public function invite(Request $request, Project $project)
     {
-        if (!$project->isOwnedBy($request->user())) {
+        if (!$request->user()->canManageCollaborators($project)) {
             abort(403);
         }
 
         try {
             $validated = $request->validate([
                 'email' => 'required|email|exists:users,email',
-                'role' => 'required|in:admin,reviewer,viewer'
+                'role' => 'required|in:owner,admin,reviewer,viewer'
             ]);
 
             $user = User::where('email', $validated['email'])->first();            
@@ -202,7 +187,7 @@ class ProjectController extends Controller
 
     public function removeMember(Request $request, Project $project, User $user)
     {
-        if (!$project->isOwnedBy($request->user())) {
+        if (!$request->user()->canManageCollaborators($project)) {
             abort(403);
         }
 
@@ -218,6 +203,31 @@ class ProjectController extends Controller
 
         return redirect()->route('projects.share', $project)
             ->with('success', 'Member removed successfully');
+    }
+
+    public function removeCollaborator(Request $request, ProjectCollaborator $collaborator)
+    {
+        // Load the project relationship if not loaded
+        $project = $collaborator->project()->first();
+        
+        if (!$project) {
+            abort(404, 'Project not found');
+        }
+        
+        // Only project owner can delete collaborators
+        if (!$request->user()->canManageCollaborators($project)) {
+            abort(403);
+        }
+
+        // Prevent deleting owner record
+        if ($collaborator->role === 'owner' || $project->created_by === $collaborator->user_id) {
+            abort(403, 'Cannot remove the project owner');
+        }
+
+        $collaborator->delete();
+
+        return redirect()->route('projects.share', $project)
+            ->with('success', 'Invitation deleted successfully');
     }
 
     public function acceptInvitation(Request $request, Project $project)

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class FolderController extends Controller
 {
@@ -108,7 +109,14 @@ class FolderController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('folders')
+                    ->where('project_id', $request->input('project_id'))
+                    ->where('parent_folder_id', $request->input('parent_folder_id')),
+            ],
             'parent_folder_id' => 'nullable|exists:folders,id',
             'project_id' => 'required|exists:projects,id',
         ]);
@@ -157,6 +165,50 @@ class FolderController extends Controller
         $readOnly = !$this->hasWriteAccess($folder->project, auth()->user());
         
         return view('folder.show', compact('folder', 'breadcrumbs', 'readOnly'));
+    }
+
+    public function update(Request $request, Folder $folder)
+    {
+        // Check write permissions
+        $project = $folder->project;
+        
+        if (!$project || !$this->hasWriteAccess($project, $request->user())) {
+            return redirect()->back()
+                ->withErrors(['permission' => 'You do not have permission to rename folders in this project'])
+                ->withInput();
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('folders')
+                    ->where('project_id', $folder->project_id)
+                    ->where('parent_folder_id', $folder->parent_folder_id)
+                    ->ignore($folder->id),
+            ],
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        try {
+            $folder->update([
+                'name' => $request->input('name'),
+            ]);
+
+            // Stay on the current page (parent folder or project)
+            return redirect()->back()
+                ->with('success', 'Folder renamed successfully');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withErrors(['update' => 'Failed to rename folder: ' . $e->getMessage()])
+                ->withInput();
+        }
     }
 
     private function getBreadcrumbs(Folder $folder)
@@ -359,38 +411,12 @@ class FolderController extends Controller
     }
 
     /**
-     * Check if user has write access to project (owner or collaborator, NOT workspace admin).
+     * Check if user has write access to project (owner or admin only).
+     * Reviewers and viewers do NOT have write access.
      */
     private function hasWriteAccess(Project $project, $user): bool
     {
-        // Project owner always has write access
-        if ($project->isOwnedBy($user)) {
-            return true;
-        }
-
-        // Check if user is a project collaborator
-        $isCollaborator = \App\Models\ProjectCollaborator::where('project_id', $project->id)
-            ->where('user_id', $user->id)
-            ->where('status', 'approved')
-            ->exists();
-
-        if ($isCollaborator) {
-            return true;
-        }
-
-        // Check if user is a workspace member with 'user' role (not admin)
-        $workspaceUser = \App\Models\WorkspaceUser::where('workspace_id', $project->workspace_id)
-            ->where('user_id', $user->id)
-            ->where('status', 'approved')
-            ->where('role', 'user')
-            ->exists();
-
-        if ($workspaceUser) {
-            return true;
-        }
-
-        // Workspace admins only have read access, NOT write access
-        return false;
+        return $project->canUserUpload($user);
     }
 
     private function processFile($file, string $folder, $folderId = null): array

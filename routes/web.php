@@ -14,7 +14,7 @@ use App\Models\Project;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return auth()->check() ? redirect()->route('dashboard') : redirect()->route('login');
 });
 
 Route::get('/dashboard', function () {
@@ -32,6 +32,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/folders/upload', [FolderController::class, 'uploadFiles'])->name('folders.upload');
     Route::delete('/folders/file', [FolderController::class, 'deleteFile'])->name('folders.file.delete');
     Route::get('/folders/{folder}', [FolderController::class, 'show'])->name('folders.show');
+    Route::put('/folders/{folder}', [FolderController::class, 'update'])->name('folders.update');
     Route::delete('/folders/{folder}', [FolderController::class, 'destroy'])->name('folders.destroy');
     
     // Workspace management routes
@@ -47,6 +48,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/workspaces/{workspace}/share', [WorkspaceController::class, 'share'])->name('workspaces.share');
     Route::post('/workspaces/{workspace}/invite', [WorkspaceController::class, 'invite'])->name('workspaces.invite');
     Route::delete('/workspaces/{workspace}/members/{user}', [WorkspaceController::class, 'removeMember'])->name('workspaces.remove-member');
+    Route::patch('/workspaces/{workspace}/members/{user}', [WorkspaceController::class, 'updateMemberRole'])->name('workspaces.update-member');
     Route::post('/workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');
     Route::get('/workspaces/{workspace}', [WorkspaceController::class, 'show'])->name('workspaces.show');
     Route::put('/workspaces/{workspace}', [WorkspaceController::class, 'update'])->name('workspaces.update');
@@ -112,6 +114,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/projects/{project}/share', [ProjectController::class, 'share'])->name('projects.share');
     Route::post('/projects/{project}/invite', [ProjectController::class, 'invite'])->name('projects.invite');
     Route::delete('/projects/{project}/members/{user}', [ProjectController::class, 'removeMember'])->name('projects.remove-member');
+    Route::delete('/project-collaborators/{collaborator}', [ProjectController::class, 'removeCollaborator'])->name('projects.remove-collaborator');
     Route::post('/projects/{project}/accept-invitation', [ProjectController::class, 'acceptInvitation'])->name('projects.accept-invitation');
     Route::post('/projects/decline-invitation/{notificationId}', [ProjectController::class, 'declineInvitation'])->name('projects.decline-invitation');
 

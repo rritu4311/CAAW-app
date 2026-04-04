@@ -89,6 +89,30 @@ class ProjectCollaborator extends Model
     }
 
     /**
+     * Check if this collaborator can upload assets (admin, reviewer).
+     */
+    public function canUpload(): bool
+    {
+        return in_array($this->role, ['admin', 'reviewer']) && $this->isApproved();
+    }
+
+    /**
+     * Check if this collaborator can comment (admin, reviewer).
+     */
+    public function canComment(): bool
+    {
+        return in_array($this->role, ['admin', 'reviewer']) && $this->isApproved();
+    }
+
+    /**
+     * Check if this collaborator can approve/reject (admin, reviewer).
+     */
+    public function canApprove(): bool
+    {
+        return in_array($this->role, ['admin', 'reviewer']) && $this->isApproved();
+    }
+
+    /**
      * Check if the user is a viewer.
      */
     public function isViewer(): bool

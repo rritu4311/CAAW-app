@@ -200,98 +200,56 @@
                         <!-- Files Section -->
                         @if($folder->assets->count() > 0)
                             <h3 class="text-lg font-semibold mb-3 text-gray-700">Files</h3>
-                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                            <div class="space-y-2">
                                 @foreach($folder->assets as $asset)
-                                    <div class="bg-white border rounded-lg overflow-hidden hover:shadow-md transition-shadow flex flex-col h-full">
-                                        <!-- Image Preview Section -->
-                                        @if($asset->file_type === 'image')
-                                            <div class="relative h-24 bg-gray-100 overflow-hidden">
+                                    <div class="flex items-center p-3 bg-white border rounded-lg hover:shadow-md transition-shadow">
+                                        <!-- Icon/Thumbnail - Canvas API -->
+                                        <div class="flex-shrink-0 w-12 h-12 mr-6">
+                                            @if($asset->file_type === 'image')
                                                 <canvas data-image-src="{{ Storage::url($asset->file_path) }}" 
                                                         data-file-name="{{ $asset->name }}"
-                                                        class="folder-image-canvas w-full h-full object-cover"
-                                                        width="200" height="120"></canvas>
-                                                
-                                                <!-- Image Badge -->
-                                                <div class="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">
-                                                    IMAGE
-                                                </div>
-                                            </div>
-                                        @elseif($asset->file_type === 'video')
-                                            <div class="relative h-24 bg-gray-100 overflow-hidden flex-shrink-0">
+                                                        class="folder-image-canvas w-12 h-12 rounded-lg cursor-pointer"
+                                                        width="48" height="48"></canvas>
+                                            @elseif($asset->file_type === 'video')
                                                 <canvas data-video-src="{{ Storage::url($asset->file_path) }}"
                                                         data-video-info="true"
-                                                        class="folder-video-canvas w-full h-full object-cover"
-                                                        width="200" height="120"></canvas>
-                                                <div class="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/20 transition-colors pointer-events-none">
-                                                    <div class="bg-white/90 rounded-full p-2">
-                                                        <svg class="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/>
-                                                        </svg>
-                                                    </div>
-                                                </div>
-                                                <div class="absolute top-2 left-2 bg-gradient-to-r from-blue-500 to-cyan-600 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">
-                                                    VIDEO
-                                                </div>
-                                            </div>
-                                        @elseif($asset->file_type === 'pdf')
-                                            <div class="relative h-24 bg-gray-100 overflow-hidden flex-shrink-0">
+                                                        class="folder-video-canvas w-12 h-12 rounded-lg"
+                                                        width="48" height="48"></canvas>
+                                            @elseif($asset->file_type === 'pdf')
                                                 <canvas data-pdf-src="{{ Storage::url($asset->file_path) }}"
                                                         data-pdf-name="{{ $asset->name }}"
-                                                        class="folder-pdf-canvas w-full h-full object-cover"
-                                                        width="200" height="120"></canvas>
-                                                <div class="absolute top-2 left-2 bg-gradient-to-r from-red-500 to-pink-600 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">
-                                                    PDF
-                                                </div>
-                                            </div>
-                                        @elseif($asset->file_type === 'doc' || $asset->file_type === 'docx')
-                                            <div class="relative h-24 bg-gray-100 overflow-hidden flex-shrink-0">
+                                                        class="folder-pdf-canvas w-12 h-12 rounded-lg"
+                                                        width="48" height="48"></canvas>
+                                            @elseif($asset->file_type === 'doc' || $asset->file_type === 'docx')
                                                 <canvas data-doc-name="{{ $asset->name }}"
                                                         data-file-type="{{ $asset->file_type }}"
-                                                        class="folder-doc-canvas w-full h-full object-cover"
-                                                        width="200" height="120"></canvas>
-                                                <div class="absolute top-2 left-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">
-                                                    {{ strtoupper($asset->file_type) }}
-                                                </div>
-                                            </div>
-                                        @elseif($asset->file_type === 'xlsx' || $asset->file_type === 'xls' || $asset->file_type === 'csv')
-                                            <div class="relative h-24 bg-gray-100 overflow-hidden flex-shrink-0">
+                                                        class="folder-doc-canvas w-12 h-12 rounded-lg"
+                                                        width="48" height="48"></canvas>
+                                            @elseif($asset->file_type === 'xlsx' || $asset->file_type === 'xls' || $asset->file_type === 'csv')
                                                 <canvas data-doc-name="{{ $asset->name }}"
                                                         data-file-type="{{ $asset->file_type }}"
-                                                        class="folder-excel-canvas w-full h-full object-cover"
-                                                        width="200" height="120"></canvas>
-                                                <div class="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">
-                                                    {{ strtoupper($asset->file_type) }}
-                                                </div>
-                                            </div>
-                                        @elseif($asset->file_type === 'txt' || $asset->file_type === 'md' || $asset->file_type === 'markdown')
-                                            <div class="relative h-24 bg-gray-100 overflow-hidden flex-shrink-0">
+                                                        class="folder-excel-canvas w-12 h-12 rounded-lg"
+                                                        width="48" height="48"></canvas>
+                                            @elseif($asset->file_type === 'txt' || $asset->file_type === 'md' || $asset->file_type === 'markdown')
                                                 <canvas data-doc-name="{{ $asset->name }}"
                                                         data-file-type="{{ $asset->file_type }}"
-                                                        class="folder-text-canvas w-full h-full object-cover"
-                                                        width="200" height="120"></canvas>
-                                                <div class="absolute top-2 left-2 bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">
-                                                    {{ strtoupper($asset->file_type) }}
+                                                        class="folder-text-canvas w-12 h-12 rounded-lg"
+                                                        width="48" height="48"></canvas>
+                                            @else
+                                                <div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
+                                                    <svg class="w-6 h-6 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                                                    </svg>
                                                 </div>
-                                            </div>
-                                        @else
-                                            <div class="relative h-24 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                                                <svg class="w-12 h-12 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-5L9 2H4z" clip-rule="evenodd"/>
-                                                </svg>
-                                                <div class="absolute top-2 left-2 bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">
-                                                    FILE
-                                                </div>
-                                            </div>
-                                        @endif
+                                            @endif
+                                        </div>
                                         
-                                        <!-- File Info Section -->
-                                        <div class="p-2 flex flex-col flex-1">
-                                            <h4 class="text-sm font-semibold text-gray-800 truncate mb-1" title="{{ $asset->name }}">{{ $asset->name }}</h4>
-                                            <p class="text-xs text-gray-500 mb-1">{{ $asset->formatted_size }}</p>
-                                            
-                                            {{-- Video Metadata Display --}}
+                                        <!-- File Info -->
+                                        <div class="flex-1 min-w-0 mr-4">
+                                            <h4 class="text-sm font-semibold text-gray-800 truncate" title="{{ $asset->name }}">{{ $asset->name }}</h4>
+                                            <p class="text-xs text-gray-500">{{ $asset->formatted_size }} • {{ strtoupper($asset->file_type) }}</p>
                                             @if($asset->file_type === 'video')
-                                                <div class="video-metadata text-xs text-gray-400 mb-2 flex items-center gap-2" data-video-src="{{ Storage::url($asset->file_path) }}">
+                                                <div class="video-metadata text-xs text-gray-400 flex items-center gap-2 mt-1" data-video-src="{{ Storage::url($asset->file_path) }}">
                                                     <span class="video-duration flex items-center gap-1">
                                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -307,36 +265,28 @@
                                                     </span>
                                                 </div>
                                             @endif
+                                        </div>
+                                        
+                                        <!-- Actions -->
+                                        <div class="flex items-center gap-2 flex-shrink-0">
+                                            @if(in_array($asset->file_type, ['image', 'video', 'pdf', 'doc', 'docx', 'xlsx', 'xls', 'csv', 'txt', 'md', 'markdown']))
+                                                <button x-data @click="$dispatch('open-file-viewer', { src: '{{ Storage::url($asset->file_path) }}', type: '{{ $asset->file_type }}', name: '{{ $asset->name }}', size: '{{ $asset->formatted_size }}' })" 
+                                                    class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors">View</button>
+                                            @endif
+                                            <a href="{{ Storage::url($asset->file_path) }}" download="{{ $asset->name }}" 
+                                                class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded transition-colors">Download</a>
                                             
-                                            <div class="flex gap-2 mt-auto">
-                                                @if($asset->file_type === 'image')
-                                                    <button x-data @click="$dispatch('open-file-viewer', { src: '{{ Storage::url($asset->file_path) }}', type: 'image' })" 
-                                                       class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded text-center transition-colors">View</button>
-                                                @elseif($asset->file_type === 'video')
-                                                    <button x-data @click="$dispatch('open-file-viewer', { src: '{{ Storage::url($asset->file_path) }}', type: 'video' })" 
-                                                       class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded text-center transition-colors">View</button>
-                                                @elseif($asset->file_type === 'pdf')
-                                                    <button x-data @click="$dispatch('open-file-viewer', { src: '{{ Storage::url($asset->file_path) }}', type: 'pdf' })" 
-                                                       class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded text-center transition-colors">View</button>
-                                                @elseif(in_array($asset->file_type, ['doc', 'docx', 'xlsx', 'xls', 'csv', 'txt', 'md', 'markdown']))
-                                                    <button x-data @click="$dispatch('open-file-viewer', { src: '{{ Storage::url($asset->file_path) }}', type: '{{ $asset->file_type }}' })" 
-                                                       class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded text-center transition-colors">View</button>
-                                                @endif
-                                                <a href="{{ Storage::url($asset->file_path) }}" download="{{ $asset->name }}" 
-                                                   class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium py-2 px-3 rounded text-center transition-colors">Download</a>
-                                                
-                                                @if(!$readOnly)
+                                            @if(!$readOnly)
                                                 <form action="{{ route('folders.file.delete') }}" method="POST" class="inline">
                                                     @csrf
                                                     @method('DELETE')
                                                     <input type="hidden" name="path" value="{{ $asset->file_path }}">
                                                     <button type="submit" 
-                                                            class="bg-red-100 hover:bg-red-200 text-red-700 text-xs font-medium py-2 px-3 rounded transition-colors">
+                                                        class="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-medium rounded transition-colors">
                                                         Delete
                                                     </button>
                                                 </form>
-                                                @endif
-                                            </div>
+                                            @endif
                                         </div>
                                     </div>
                                 @endforeach
