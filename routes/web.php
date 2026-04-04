@@ -34,6 +34,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/folders/{folder}', [FolderController::class, 'show'])->name('folders.show');
     Route::put('/folders/{folder}', [FolderController::class, 'update'])->name('folders.update');
     Route::delete('/folders/{folder}', [FolderController::class, 'destroy'])->name('folders.destroy');
+    Route::post('/assets/move', [FolderController::class, 'moveAsset'])->name('assets.move');
+    Route::get('/projects/{project}/folder-tree', [FolderController::class, 'getFolderTree'])->name('projects.folder-tree');
     
     // Workspace management routes
     Route::get('/workspaces', [WorkspaceController::class, 'index'])->name('workspaces.index');

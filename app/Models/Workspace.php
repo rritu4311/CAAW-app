@@ -90,8 +90,16 @@ class Workspace extends Model
     }
 
     /**
-     * Check if user can view all projects (Owner, Admin - full access).
-     * Regular users can only view but with limited management.
+     * Check if user can manage projects (Owner or User have full access).
+     * Admin: read-only access.
+     */
+    public function canUserManageProjects(User $user): bool
+    {
+        return $this->userHasRole($user, ['owner', 'user']);
+    }
+
+    /**
+     * Check if user can view all projects (Owner, Admin, User - all have view access).
      */
     public function canUserViewProjects(User $user): bool
     {

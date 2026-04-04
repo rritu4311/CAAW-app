@@ -16,7 +16,7 @@
                                 <span class="font-bold text-xl">{{ $workspace->name }}</span>
                             </p>
                         </div>
-                        @if($isOwner || $isAdmin || $isWorkspaceUser)
+                        @if($isOwner || $isWorkspaceUser)
                         <a href="{{ route('workspace.create', $workspace) }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
                             Create Project
                         </a>
@@ -64,7 +64,7 @@
                                                             {{ $pendingCount }} pending
                                                         </span>
                                                     @endif
-                                                    @if($isOwner || $project->isOwnedBy(auth()->user()))
+                                                    @if($isOwner || $isWorkspaceUser || $project->isOwnedBy(auth()->user()))
                                                     <form action="{{ route('workspace.edit', [$workspace, $project]) }}" method="GET" class="inline">
                                                         <button type="submit" 
                                                                 class="bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white p-2 rounded transition duration-200 border border-blue-700 dark:border-blue-600"
@@ -85,6 +85,14 @@
                                                             </svg>
                                                         </button>
                                                     </form>
+                                                    <button type="button" 
+                                                            class="bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 text-white p-2 rounded transition duration-200 border border-red-700 dark:border-red-600"
+                                                            onclick="event.stopPropagation()"
+                                                            title="Archive Project">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                                                        </svg>
+                                                    </button>
                                                     @endif
                                                 </div>
                                             </div>

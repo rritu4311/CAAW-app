@@ -74,10 +74,9 @@ class WorkareaController extends Controller
     {
         $user = $request->user();
 
-        // Owner: can edit any project
+        // Owner and User have full access (can edit any project)
         // Admin: read-only (cannot edit projects)
-        // User: can edit own projects only
-        $canEdit = $workspace->isOwnedBy($user) || $project->isOwnedBy($user);
+        $canEdit = $workspace->isOwnedBy($user) || $workspace->userHasRole($user, ['user']) || $project->isOwnedBy($user);
 
         if (!$canEdit || $project->workspace_id !== $workspace->id) {
             abort(403);
@@ -107,10 +106,9 @@ class WorkareaController extends Controller
     {
         $user = $request->user();
 
-        // Owner: can delete any project
+        // Owner and User have full access (can delete any project)
         // Admin: read-only (cannot delete projects)
-        // User: can delete own projects only
-        $canDelete = $workspace->isOwnedBy($user) || $project->isOwnedBy($user);
+        $canDelete = $workspace->isOwnedBy($user) || $workspace->userHasRole($user, ['user']) || $project->isOwnedBy($user);
 
         if (!$canDelete || $project->workspace_id !== $workspace->id) {
             abort(403);

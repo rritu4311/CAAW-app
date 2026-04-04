@@ -568,4 +568,67 @@ class FolderController extends Controller
         
         return $breadcrumb;
     }
+
+    /**
+     * Move an asset to a different folder.
+     */
+    public function moveAsset(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'asset_id' => 'required|exists:assets,id',
+            'target_folder_id' => 'nullable|exists:folders,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
+
+        $assetId = $request->input('asset_id');
+        $targetFolderId = $request->input('target_folder_id');
+
+        $asset = Asset::findOrFail($assetId);
+        
+        // Check write permissions
+        $project = $asset->project;
+        if (!$project || !$this->hasWriteAccess($project, $request->user())) {
+            return response()->json(['error' => 'You do not have permission to move files in this project'], 403);
+        }
+
+        // If target folder is specified, verify it's in the same project
+        if ($targetFolderId) {
+            $targetFolder = Folder::find($targetFolderId);
+            if ($targetFolder && $targetFolder->project_id !== $asset->project_id) {
+                return response()->json(['error' => 'Cannot move files to a different project'], 403);
+            }
+        }
+
+        try {
+            $asset->update(['folder_id' => $targetFolderId]);
+            return response()->json(['success' => true, 'message' => 'File moved successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to move file: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Get folder tree for a project.
+     */
+    public function getFolderTree(Request $request, Project $project)
+    {
+        if (!$this->hasWriteAccess($project, $request->user())) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $folders = Folder::where('project_id', $project->id)
+            ->whereNull('parent_folder_id')
+            ->with(['children' => function($query) {
+                $query->orderBy('order')->with(['children' => function($q) {
+                    $q->orderBy('order');
+                }]);
+            }])
+            ->orderBy('order')
+            ->get();
+
+        return response()->json($folders);
+    }
 }

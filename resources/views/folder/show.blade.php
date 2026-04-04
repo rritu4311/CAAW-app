@@ -63,6 +63,13 @@
                                     Delete Folder
                                 </button>
                             </form>
+                            
+                            <!-- Archive Folder Button -->
+                            <button type="button" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700" title="Archive Folder">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                                </svg>
+                            </button>
                         </div>
                         @endif
                     </div>
@@ -98,7 +105,7 @@
 
                     <!-- File Upload Section -->
                     @if(!$readOnly)
-                    <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 hover:border-blue-500 dark:hover:border-blue-400 transition-colors mb-6">
+                    <div id="dropZone" class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 hover:border-blue-500 dark:hover:border-blue-400 transition-colors mb-6 cursor-pointer">
                         <div class="text-center">
                             <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
@@ -121,7 +128,7 @@
                                                class="hidden">
                                         
                                         <button type="button" onclick="document.getElementById('fileInput').click()"
-                                                class="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center">
+                                                class="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center pointer-events-auto">
                                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                                             </svg>
@@ -182,6 +189,13 @@
                                                     </svg>
                                                 </button>
                                             </form>
+                                            
+                                            <button type="button" class="p-1 text-xs bg-red-600 text-white rounded hover:bg-red-700" 
+                                                    title="Archive Folder">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                                                </svg>
+                                            </button>
                                         </div>
                                         @endif
                                     </li>
@@ -277,6 +291,49 @@
                                                 class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded transition-colors">Download</a>
                                             
                                             @if(!$readOnly)
+                                                <!-- Move Asset Dropdown -->
+                                                <div class="relative inline-block" id="moveDropdown{{ $asset->id }}">
+                                                    <button type="button" 
+                                                        onclick="toggleMoveDropdown({{ $asset->id }}, {{ $folder->project->id }}, {{ $folder->id ?: 'null' }})"
+                                                        class="px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs font-medium rounded transition-colors flex items-center"
+                                                        title="Move File">
+                                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                                        </svg>
+                                                        Move
+                                                        <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                        </svg>
+                                                    </button>
+                                                    <!-- Dropdown Menu -->
+                                                    <div id="moveMenu{{ $asset->id }}" class="hidden absolute right-0 mt-1 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-50">
+                                                        <div class="py-1 max-h-64 overflow-y-auto">
+                                                            <p class="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                                                Move "{{ Str::limit($asset->name, 20) }}" to:
+                                                            </p>
+                                                            <!-- Project Root -->
+                                                            <button type="button"
+                                                                onclick="quickMoveAsset({{ $asset->id }}, null, 'Project Root')"
+                                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors flex items-center {{ is_null($folder->id) ? 'opacity-50 cursor-not-allowed' : '' }}"
+                                                                {{ is_null($folder->id) ? 'disabled' : '' }}>
+                                                                <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                                                                </svg>
+                                                                <span>Project Root {{ is_null($folder->id) ? '(current)' : '' }}</span>
+                                                            </button>
+                                                            <!-- Folders will be loaded dynamically -->
+                                                            <div id="moveFolders{{ $asset->id }}" class="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
+                                                                <div class="px-3 py-2 text-center text-xs text-gray-400">
+                                                                    <svg class="animate-spin h-4 w-4 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                    </svg>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
                                                 <form action="{{ route('folders.file.delete') }}" method="POST" class="inline">
                                                     @csrf
                                                     @method('DELETE')
@@ -286,6 +343,15 @@
                                                         Delete
                                                     </button>
                                                 </form>
+                                                
+                                                <!-- Archive Asset Button -->
+                                                <button type="button" 
+                                                    class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors"
+                                                    title="Archive File">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                                                    </svg>
+                                                </button>
                                             @endif
                                         </div>
                                     </div>
@@ -411,15 +477,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // File input auto-upload
     const fileInput = document.getElementById('fileInput');
     const uploadForm = document.getElementById('uploadForm');
-
-    // File input change handler - auto-upload when files are selected
-    fileInput.addEventListener('change', function() {
-        if (this.files.length > 0) {
-            uploadForm.submit();
-        }
-    });
+    
+    if (fileInput && uploadForm) {
+        fileInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                uploadForm.submit();
+            }
+        });
+    }
     
     // Initialize Canvas Image Previews
     document.querySelectorAll('.folder-image-canvas').forEach(canvas => {
@@ -948,6 +1016,255 @@ function downloadCroppedImage() {
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && !document.getElementById('cropModal').classList.contains('hidden')) {
         closeCropModal();
+    }
+});
+
+// Drag and Drop File Upload
+document.addEventListener('DOMContentLoaded', function() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const uploadForm = document.getElementById('uploadForm');
+    
+    if (!dropZone || !fileInput || !uploadForm) return;
+
+    // Prevent default drag behaviors
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    // Highlight drop zone
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    dropZone.addEventListener('drop', handleDrop, false);
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    function highlight() {
+        dropZone.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
+        dropZone.classList.remove('border-gray-300', 'dark:border-gray-600');
+    }
+
+    function unhighlight() {
+        dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
+        dropZone.classList.add('border-gray-300', 'dark:border-gray-600');
+    }
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            uploadForm.submit();
+        }
+    }
+
+    // Click on dropZone (but not on button) triggers file input
+    dropZone.addEventListener('click', function(e) {
+        if (e.target.tagName !== 'BUTTON' && !e.target.closest('button')) {
+            fileInput.click();
+        }
+    });
+});
+
+// Move Asset Dropdown Functions
+let activeDropdown = null;
+let folderCache = {};
+
+function toggleMoveDropdown(assetId, projectId, currentFolderId) {
+    const dropdown = document.getElementById(`moveMenu${assetId}`);
+    const foldersContainer = document.getElementById(`moveFolders${assetId}`);
+    
+    // Close other open dropdowns
+    if (activeDropdown && activeDropdown !== dropdown) {
+        activeDropdown.classList.add('hidden');
+    }
+    
+    // Toggle current dropdown
+    if (dropdown.classList.contains('hidden')) {
+        dropdown.classList.remove('hidden');
+        activeDropdown = dropdown;
+        
+        // Load folders if not cached
+        if (!folderCache[projectId]) {
+            loadFoldersForDropdown(projectId, currentFolderId, foldersContainer, assetId);
+        } else {
+            renderFoldersForDropdown(folderCache[projectId], currentFolderId, foldersContainer, assetId);
+        }
+        
+        // Close dropdown when clicking outside
+        setTimeout(() => {
+            document.addEventListener('click', closeDropdownOnClickOutside);
+        }, 0);
+    } else {
+        dropdown.classList.add('hidden');
+        activeDropdown = null;
+    }
+}
+
+function closeDropdownOnClickOutside(e) {
+    if (activeDropdown && !activeDropdown.contains(e.target) && !e.target.closest('[id^="moveDropdown"]')) {
+        activeDropdown.classList.add('hidden');
+        activeDropdown = null;
+        document.removeEventListener('click', closeDropdownOnClickOutside);
+    }
+}
+
+async function loadFoldersForDropdown(projectId, currentFolderId, container, assetId) {
+    container.innerHTML = '<div class="px-3 py-2 text-center text-xs text-gray-400"><svg class="animate-spin h-4 w-4 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>';
+    
+    try {
+        const response = await fetch(`/projects/${projectId}/folder-tree`);
+        if (!response.ok) throw new Error('Failed to load folders');
+        
+        const folders = await response.json();
+        folderCache[projectId] = folders;
+        
+        renderFoldersForDropdown(folders, currentFolderId, container, assetId);
+    } catch (error) {
+        container.innerHTML = '<div class="px-3 py-2 text-xs text-red-500">Error loading folders</div>';
+        console.error('Error loading folders:', error);
+    }
+}
+
+function renderFoldersForDropdown(folders, currentFolderId, container, assetId, parentPath = '') {
+    if (!folders || folders.length === 0) {
+        container.innerHTML = '<div class="px-3 py-2 text-xs text-gray-400 italic">No folders available</div>';
+        return;
+    }
+    
+    let html = '';
+    folders.forEach(folder => {
+        const fullPath = parentPath ? `${parentPath} / ${folder.name}` : folder.name;
+        html += renderFolderItem(folder, currentFolderId, 0, assetId, fullPath);
+    });
+    
+    container.innerHTML = html;
+}
+
+function renderFolderItem(folder, currentFolderId, level, assetId, fullPath = '') {
+    const isCurrent = folder.id === currentFolderId;
+    const indent = level * 12;
+    const disabledClass = isCurrent ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300';
+    const folderName = folder.name.replace(/'/g, "\\'");
+    const pathDisplay = fullPath.replace(/'/g, "\\'");
+    
+    let html = `
+        <button type="button"
+            onclick="${isCurrent ? '' : `quickMoveAsset(${assetId}, ${folder.id}, '${folderName}', '${pathDisplay}')`}"
+            class="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 transition-colors flex flex-col ${disabledClass}"
+            style="padding-left: ${16 + indent}px"
+            ${isCurrent ? 'disabled' : ''}
+            title="Directory: ${pathDisplay}">
+            <div class="flex items-center w-full">
+                <svg class="w-4 h-4 mr-2 text-yellow-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                </svg>
+                <span class="truncate font-medium">${folder.name} ${isCurrent ? '(current)' : ''}</span>
+            </div>
+            ${!isCurrent ? `<div class="text-xs text-gray-400 ml-6 truncate" style="max-width: 180px;">${fullPath}</div>` : ''}
+        </button>
+    `;
+    
+    if (folder.children && folder.children.length > 0) {
+        folder.children.forEach(child => {
+            const childPath = fullPath ? `${fullPath} / ${child.name}` : child.name;
+            html += renderFolderItem(child, currentFolderId, level + 1, assetId, childPath);
+        });
+    }
+    
+    return html;
+}
+
+async function quickMoveAsset(assetId, targetFolderId, folderName, directoryPath = '') {
+    const dropdown = document.getElementById(`moveMenu${assetId}`);
+    if (dropdown) {
+        dropdown.classList.add('hidden');
+    }
+    activeDropdown = null;
+    
+    const displayLocation = directoryPath || folderName;
+    
+    try {
+        const formData = new FormData();
+        formData.append('asset_id', assetId);
+        formData.append('target_folder_id', targetFolderId || '');
+        formData.append('_token', document.querySelector('meta[name="csrf-token"]')?.content || '');
+
+        const response = await fetch('/assets/move', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            showToast(`Moved to: ${displayLocation}`, 'success');
+            
+            // Remove the moved asset from the DOM with animation
+            const assetElement = document.querySelector(`[data-asset-id="${assetId}"]`);
+            if (assetElement) {
+                assetElement.style.transition = 'all 0.3s ease';
+                assetElement.style.transform = 'translateX(-100%)';
+                assetElement.style.opacity = '0';
+                setTimeout(() => {
+                    assetElement.remove();
+                    // Check if no more assets
+                    const remainingAssets = document.querySelectorAll('[data-asset-id]');
+                    if (remainingAssets.length === 0) {
+                        location.reload();
+                    }
+                }, 300);
+            }
+        } else {
+            const error = await response.json();
+            showToast(error.error || error.message || 'Failed to move file', 'error');
+        }
+    } catch (error) {
+        console.error('Error moving asset:', error);
+        showToast('Failed to move file', 'error');
+    }
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 text-white font-medium transform transition-all duration-300 translate-y-full opacity-0 ${
+        type === 'success' ? 'bg-green-600' : 'bg-red-600'
+    }`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.remove('translate-y-full', 'opacity-0');
+    }, 10);
+    
+    setTimeout(() => {
+        toast.classList.add('translate-y-full', 'opacity-0');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                document.body.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Close dropdowns on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && activeDropdown) {
+        activeDropdown.classList.add('hidden');
+        activeDropdown = null;
+        document.removeEventListener('click', closeDropdownOnClickOutside);
     }
 });
 </script>

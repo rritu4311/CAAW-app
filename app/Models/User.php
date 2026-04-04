@@ -147,6 +147,56 @@ class User extends Authenticatable
     }
 
     /**
+     * Get workspace role for a specific workspace.
+     */
+    public function getWorkspaceRole(Workspace $workspace): ?string
+    {
+        if ($workspace->isOwnedBy($this)) {
+            return 'owner';
+        }
+
+        $workspaceUser = WorkspaceUser::where('workspace_id', $workspace->id)
+            ->where('user_id', $this->id)
+            ->where('status', 'approved')
+            ->first();
+
+        return $workspaceUser?->role;
+    }
+
+    /**
+     * Check if user has a specific role in a workspace.
+     */
+    public function hasWorkspaceRole(Workspace $workspace, array $roles): bool
+    {
+        if (in_array('owner', $roles) && $workspace->isOwnedBy($this)) {
+            return true;
+        }
+
+        $workspaceUser = WorkspaceUser::where('workspace_id', $workspace->id)
+            ->where('user_id', $this->id)
+            ->where('status', 'approved')
+            ->first();
+
+        return $workspaceUser && in_array($workspaceUser->role, $roles);
+    }
+
+    /**
+     * Check if user can manage workspace members (Owner or Admin).
+     */
+    public function canManageWorkspaceMembers(Workspace $workspace): bool
+    {
+        return $this->hasWorkspaceRole($workspace, ['owner', 'admin']);
+    }
+
+    /**
+     * Check if user can create projects in a workspace.
+     */
+    public function canCreateProjectsInWorkspace(Workspace $workspace): bool
+    {
+        return $this->hasWorkspaceRole($workspace, ['owner', 'admin', 'user']);
+    }
+
+    /**
      * Check if user can view the project (Owner, Admin, Reviewer, Viewer, or any Workspace Member).
      */
     public function canViewProject(Project $project): bool
@@ -160,8 +210,9 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user can upload assets (Owner, Admin, Reviewer).
+     * Check if user can upload assets (Owner, User, Admin, Reviewer).
      * Workspace admins have read-only access, so they cannot upload.
+     * Users with 'user' role have full access like Owner.
      */
     public function canUploadToProject(Project $project): bool
     {
@@ -169,6 +220,11 @@ class User extends Authenticatable
             return true;
         }
 
+        // User role has full access like Owner
+        if ($this->hasWorkspaceRole($project->workspace, ['user'])) {
+            return true;
+        }
+
         // Workspace admins have read-only access, exclude them
         if ($this->isWorkspaceAdmin($project) || $this->isWorkspaceOwner($project)) {
             return false;
@@ -179,8 +235,9 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user can comment (Owner, Admin, Reviewer).
+     * Check if user can comment (Owner, User, Admin, Reviewer).
      * Workspace admins have read-only access, so they cannot comment.
+     * Users with 'user' role have full access like Owner.
      */
     public function canCommentOnProject(Project $project): bool
     {
@@ -188,22 +245,8 @@ class User extends Authenticatable
             return true;
         }
 
-        // Workspace admins have read-only access, exclude them
-        if ($this->isWorkspaceAdmin($project) || $this->isWorkspaceOwner($project)) {
-            return false;
-        }
-
-        $collaborator = $this->getProjectCollaborator($project);
-        return $collaborator !== null && in_array($collaborator->role, ['admin', 'reviewer']);
-    }
-
-    /**
-     * Check if user can approve/reject assets (Owner, Admin, Reviewer).
-     * Workspace admins have read-only access, so they cannot approve/reject.
-     */
-    public function canApproveInProject(Project $project): bool
-    {
-        if ($this->isProjectOwner($project)) {
+        // User role has full access like Owner
+        if ($this->hasWorkspaceRole($project->workspace, ['user'])) {
             return true;
         }
 
@@ -217,26 +260,51 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user can manage collaborators (Owner only).
+     * Check if user can approve/reject assets (Owner, User, Admin, Reviewer).
+     * Workspace admins have read-only access, so they cannot approve/reject.
+     * Users with 'user' role have full access like Owner.
+     */
+    public function canApproveInProject(Project $project): bool
+    {
+        if ($this->isProjectOwner($project)) {
+            return true;
+        }
+
+        // User role has full access like Owner
+        if ($this->hasWorkspaceRole($project->workspace, ['user'])) {
+            return true;
+        }
+
+        // Workspace admins have read-only access, exclude them
+        if ($this->isWorkspaceAdmin($project) || $this->isWorkspaceOwner($project)) {
+            return false;
+        }
+
+        $collaborator = $this->getProjectCollaborator($project);
+        return $collaborator !== null && in_array($collaborator->role, ['admin', 'reviewer']);
+    }
+
+    /**
+     * Check if user can manage collaborators (Owner or User with full access).
      */
     public function canManageCollaborators(Project $project): bool
     {
-        return $this->isProjectOwner($project);
+        return $this->isProjectOwner($project) || $this->hasWorkspaceRole($project->workspace, ['user']);
     }
 
     /**
-     * Check if user can delete the project (Owner only).
+     * Check if user can delete the project (Owner or User with full access).
      */
     public function canDeleteProject(Project $project): bool
     {
-        return $this->isProjectOwner($project);
+        return $this->isProjectOwner($project) || $this->hasWorkspaceRole($project->workspace, ['user']);
     }
 
     /**
-     * Check if user can manage project settings (Owner only).
+     * Check if user can manage project settings (Owner or User with full access).
      */
     public function canManageProject(Project $project): bool
     {
-        return $this->isProjectOwner($project);
+        return $this->isProjectOwner($project) || $this->hasWorkspaceRole($project->workspace, ['user']);
     }
 }

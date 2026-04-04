@@ -100,41 +100,79 @@ class Project extends Model
 
     /**
      * Check if user can upload assets to this project.
+     * Workspace User and Owner roles have full access.
      */
     public function canUserUpload(User $user): bool
     {
-        return $this->userHasRole($user, ['owner', 'admin', 'reviewer']);
+        // Project-level roles
+        if ($this->userHasRole($user, ['owner', 'admin', 'reviewer'])) {
+            return true;
+        }
+
+        // Check workspace role via database (workspace_id is always available)
+        $workspaceUser = \App\Models\WorkspaceUser::where('workspace_id', $this->workspace_id)
+            ->where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->first();
+
+        if ($workspaceUser && in_array($workspaceUser->role, ['user', 'owner'])) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
      * Check if user can comment on this project.
+     * Workspace User role has full access like Owner.
      */
     public function canUserComment(User $user): bool
     {
-        return $this->userHasRole($user, ['owner', 'admin', 'reviewer']);
+        // Project-level roles
+        if ($this->userHasRole($user, ['owner', 'admin', 'reviewer'])) {
+            return true;
+        }
+
+        // Workspace User role has full access like Owner
+        if ($user->hasWorkspaceRole($this->workspace, ['user'])) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
      * Check if user can approve/reject assets in this project.
+     * Workspace User role has full access like Owner.
      */
     public function canUserApprove(User $user): bool
     {
-        return $this->userHasRole($user, ['owner', 'admin', 'reviewer']);
+        // Project-level roles
+        if ($this->userHasRole($user, ['owner', 'admin', 'reviewer'])) {
+            return true;
+        }
+
+        // Workspace User role has full access like Owner
+        if ($user->hasWorkspaceRole($this->workspace, ['user'])) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
-     * Check if user can manage collaborators (owner only).
+     * Check if user can manage collaborators (owner or workspace User).
      */
     public function canUserManageCollaborators(User $user): bool
     {
-        return $this->isOwnedBy($user);
+        return $this->isOwnedBy($user) || $user->hasWorkspaceRole($this->workspace, ['user']);
     }
 
     /**
-     * Check if user can delete this project (owner only).
+     * Check if user can delete this project (owner or workspace User).
      */
     public function canUserDelete(User $user): bool
     {
-        return $this->isOwnedBy($user);
+        return $this->isOwnedBy($user) || $user->hasWorkspaceRole($this->workspace, ['user']);
     }
 }
