@@ -9,6 +9,7 @@ use App\Http\Controllers\FolderController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ThemeController;
 use App\Http\Controllers\AssetPreviewController;
+use App\Http\Controllers\ArchiveController;
 use App\Models\Workspace;
 use App\Models\Project;
 use Illuminate\Support\Facades\Route;
@@ -52,7 +53,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/workspaces/{workspace}/members/{user}', [WorkspaceController::class, 'removeMember'])->name('workspaces.remove-member');
     Route::patch('/workspaces/{workspace}/members/{user}', [WorkspaceController::class, 'updateMemberRole'])->name('workspaces.update-member');
     Route::post('/workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');
-    Route::get('/workspaces/{workspace}', [WorkspaceController::class, 'show'])->name('workspaces.show');
+    Route::get('/workspaces/{workspace}', [WorkareaController::class, 'index'])->name('workspaces.show');
     Route::put('/workspaces/{workspace}', [WorkspaceController::class, 'update'])->name('workspaces.update');
     Route::delete('/workspaces/{workspace}', [WorkspaceController::class, 'destroy'])->name('workspaces.destroy');
     
@@ -72,6 +73,10 @@ Route::middleware('auth')->group(function () {
 
     // Activity Log route
     Route::get('/activity-log', [WorkspaceController::class, 'activityLog'])->name('activity.log');
+
+    // Archive route
+    Route::get('/archive', [ArchiveController::class, 'index'])->name('archive.index');
+    Route::get('/workspaces/{workspace}/archive', [ArchiveController::class, 'workspaceArchive'])->name('workspace.archive');
 
     // Debug route to check workspace users status
     Route::get('/debug/workspace-users/{workspace}', function (Workspace $workspace) {
@@ -119,6 +124,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('/project-collaborators/{collaborator}', [ProjectController::class, 'removeCollaborator'])->name('projects.remove-collaborator');
     Route::post('/projects/{project}/accept-invitation', [ProjectController::class, 'acceptInvitation'])->name('projects.accept-invitation');
     Route::post('/projects/decline-invitation/{notificationId}', [ProjectController::class, 'declineInvitation'])->name('projects.decline-invitation');
+    
+    // Project archive routes
+    Route::patch('/projects/{project}/archive', [ProjectController::class, 'archive'])->name('projects.archive');
+    Route::patch('/projects/{project}/unarchive', [ProjectController::class, 'unarchive'])->name('projects.unarchive');
 
     // Asset preview routes
     Route::get('/assets/{asset}/preview', [AssetPreviewController::class, 'preview'])->name('assets.preview');
