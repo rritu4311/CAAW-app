@@ -488,7 +488,7 @@ class FileUploadController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'File deleted successfully',
+                'message' => 'File deleted successfully ',
             ]);
             
         } catch (\Exception $e) {
