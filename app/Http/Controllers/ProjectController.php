@@ -23,10 +23,14 @@ class ProjectController extends Controller
             ->with(['project' => function ($query) {
                 $query->with(['projectCollaborators' => function ($query) {
                     $query->where('status', 'approved');
-                }, 'folders', 'owner']);
+                }, 'folders', 'owner'])
+                ->where('status', '!=', 'archived'); // Filter out archived projects
             }])
             ->get()
-            ->pluck('project');
+            ->pluck('project')
+            ->filter(function ($project) {
+                return $project && $project->status !== 'archived';
+            });
         
         return view('projects.share-index', compact('projects'));
     }
@@ -275,5 +279,51 @@ class ProjectController extends Controller
         $notification->markAsRead();
 
         return back()->with('success', 'You have declined the project invitation.');
+    }
+
+    public function archive(Request $request, Project $project)
+    {
+        $user = $request->user();
+
+        // Check if user can archive (only workspace admins can archive)
+        if (!$user->canArchiveProject($project)) {
+            abort(403, 'You do not have permission to archive this project');
+        }
+
+        // Update project status to archived
+        $project->status = 'archived';
+        $project->save();
+
+        // Redirect back to workspace page
+        if ($project->workspace_id) {
+            return redirect()->route('workspaces.show', $project->workspace)
+                ->with('success', 'Project archived successfully.');
+        }
+
+        return redirect()->route('archive.index')
+            ->with('success', 'Project archived successfully.');
+    }
+
+    public function unarchive(Request $request, Project $project)
+    {
+        $user = $request->user();
+
+        // Check if user can unarchive (only workspace admins can unarchive)
+        if (!$user->canArchiveProject($project)) {
+            abort(403, 'You do not have permission to unarchive this project');
+        }
+
+        // Update project status back to active
+        $project->status = 'active';
+        $project->save();
+
+        // Redirect to workspace archive if project belongs to a workspace
+        if ($project->workspace_id) {
+            return redirect()->route('workspace.archive', $project->workspace)
+                ->with('success', 'Project unarchived successfully.');
+        }
+
+        return redirect()->route('archive.index')
+            ->with('success', 'Project unarchived successfully.');
     }
 }

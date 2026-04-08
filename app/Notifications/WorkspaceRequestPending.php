@@ -43,7 +43,7 @@ class WorkspaceRequestPending extends Notification
         return (new MailMessage)
             ->subject('New Workspace Access Request')
             ->greeting('Hello ' . $notifiable->name . '!')
-            ->line('{$this->user->name} has requested access to your workspace: **' . $this->workspaceUser->workspace->name . '**')
+            ->line($this->user->name . ' has requested access to your workspace: **' . $this->workspaceUser->workspace->name . '**')
             ->line('Please review and approve or reject this request.')
             ->action('View Notifications', route('notifications.index'))
             ->line('Thank you for using our application!');

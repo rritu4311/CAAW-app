@@ -17,9 +17,26 @@
                             </p>
                         </div>
                         @if($isOwner || $isWorkspaceUser)
-                        <a href="{{ route('workspace.create', $workspace) }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
-                            Create Project
-                        </a>
+                        <div class="flex items-center space-x-2">
+                            <a href="{{ route('workspace.create', $workspace) }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
+                                Create Project
+                            </a>
+                        </div>
+                        @elseif($isAdmin && !$isOwner)
+                        <div class="flex items-center space-x-2">
+                            <a href="{{ route('workspace.unarchive', $workspace) }}" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 flex items-center">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004 12v1m4.21-12l3 3m-3-3l-3 3m2.9 13.9a8.001 8.001 0 0011.319 0l1.414 1.414A10.001 10.001 0 0112 21c-3.217 0-6.32-1.28-8.54-3.52l1.42-1.42z"/>
+                                </svg>
+                                Unarchive
+                            </a>
+                            <a href="{{ route('workspace.archive', $workspace) }}" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 flex items-center">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                                </svg>
+                                Archive
+                            </a>
+                        </div>
                         @endif
                     </div>
 
@@ -39,13 +56,18 @@
                         </div>
                     @endif
 
+                    @php
+                        $activeProjects = $workspace->projects->filter(function($project) {
+                            return $project->status !== 'archived';
+                        });
+                    @endphp
                     <div class="space-y-6">
-                        @if($workspace->projects->count() === 0)
+                        @if($activeProjects->count() === 0)
                             <div class="col-span-full text-center py-12">
                                 <p class="text-gray-500 text-lg">No projects found. Create your first project!</p>
                             </div>
                         @else
-                            @foreach($workspace->projects as $project)
+                            @foreach($activeProjects as $project)
                                 <div onclick="window.location.href='{{ route('projects.show', $project) }}'"
                                      class="bg-white dark:bg-gray-700 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 ease-in-out p-6 border border-gray-200 dark:border-gray-600 cursor-pointer">
                                     <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
@@ -85,15 +107,20 @@
                                                             </svg>
                                                         </button>
                                                     </form>
-                                                    <button type="button" 
-                                                            class="bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 text-white p-2 rounded transition duration-200 border border-red-700 dark:border-red-600"
-                                                            onclick="event.stopPropagation()"
-                                                            title="Archive Project">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
-                                                        </svg>
-                                                    </button>
-                                                    @endif
+                                                @elseif($isAdmin && !$isOwner)
+                                                    <form method="POST" action="{{ route('projects.archive', $project) }}" class="inline" onsubmit="return confirm('Are you sure you want to archive this project?')">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <button type="submit"
+                                                                class="bg-red-600 text-white p-2 rounded hover:bg-red-700 transition"
+                                                                title="Archive Project"
+                                                                onclick="event.stopPropagation()">
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                                                            </svg>
+                                                        </button>
+                                                    </form>
+                                                @endif
                                                 </div>
                                             </div>
                                             <div class="space-y-2 mb-4">

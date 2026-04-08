@@ -28,17 +28,17 @@
                             </div>
                         </div>
                         
-                        <!-- Action Buttons -->
-                        <div class="flex gap-2">
-                            @if($project->isOwnedBy(auth()->user()))
+                        <!-- Owner Action Buttons -->
+                        @if($project->isOwnedBy(auth()->user()) || auth()->user()->isWorkspaceOwner($project))
+                            <div class="flex gap-2">
+                                <!-- Share Button -->
                                 <a href="{{ route('projects.share', $project) }}" 
                                    class="p-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors" title="Share Project">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"/>
                                     </svg>
                                 </a>
-                            @endif
-                            @if(!isset($readOnly) || !$readOnly)
+                                
                                 <!-- Create Folder Button -->
                                 <button onclick="openModal('createFolderModalroot')" 
                                         class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors" title="Create Folder">
@@ -55,17 +55,40 @@
                                         </svg>
                                     </button>
                                 </form>
-                                <!-- Archive Button -->
-                                    <button type="button" 
-                                            class="bg-red-600 text-white p-2 rounded hover:bg-red-700 transition"
-                                            onclick="event.stopPropagation()"
-                                            title="Archive Project">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
-                                        </svg>
-                                    </button>
-                            @endif
-                        </div>
+                            </div>
+                        @endif
+
+                        <!-- Admin Action Buttons -->
+                        @if(auth()->user()->isWorkspaceAdmin($project) && !auth()->user()->isWorkspaceOwner($project))
+                            <div class="flex gap-2">
+                                <!-- Archive/Unarchive Button -->
+                                @if($project->status === 'archived')
+                                    <form method="POST" action="{{ route('projects.unarchive', $project) }}" class="inline" onsubmit="return confirm('Are you sure you want to unarchive this project?')">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit"
+                                                class="bg-green-600 text-white p-2 rounded hover:bg-green-700 transition"
+                                                title="Unarchive Project">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004 12v1m4.21-12l3 3m-3-3l-3 3m2.9 13.9a8.001 8.001 0 0011.319 0l1.414 1.414A10.001 10.001 0 0112 21c-3.217 0-6.32-1.28-8.54-3.52l1.42-1.42z"/>
+                                            </svg>
+                                        </button>
+                                    </form>
+                                @else
+                                    <form method="POST" action="{{ route('projects.archive', $project) }}" class="inline" onsubmit="return confirm('Are you sure you want to archive this project?')">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit"
+                                                class="bg-red-600 text-white p-2 rounded hover:bg-red-700 transition"
+                                                title="Archive Project">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                                            </svg>
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
+                        @endif
                     </div>
 
                     <!-- Project Details -->

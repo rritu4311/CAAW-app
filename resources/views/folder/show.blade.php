@@ -64,12 +64,6 @@
                                 </button>
                             </form>
                             
-                            <!-- Archive Folder Button -->
-                            <button type="button" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700" title="Archive Folder">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
-                                </svg>
-                            </button>
                         </div>
                         @endif
                     </div>
@@ -190,12 +184,6 @@
                                                 </button>
                                             </form>
                                             
-                                            <button type="button" class="p-1 text-xs bg-red-600 text-white rounded hover:bg-red-700" 
-                                                    title="Archive Folder">
-                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
-                                                </svg>
-                                            </button>
                                         </div>
                                         @endif
                                     </li>
@@ -344,14 +332,6 @@
                                                     </button>
                                                 </form>
                                                 
-                                                <!-- Archive Asset Button -->
-                                                <button type="button" 
-                                                    class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors"
-                                                    title="Archive File">
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
-                                                    </svg>
-                                                </button>
                                             @endif
                                         </div>
                                     </div>

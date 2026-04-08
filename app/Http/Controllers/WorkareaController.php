@@ -22,6 +22,12 @@ class WorkareaController extends Controller
         $isAdmin = $workspace->userHasRole($user, ['admin']);
         $isWorkspaceUser = $workspace->userHasRole($user, ['user', 'member']);
 
+        // Load only active (non-archived) projects
+        $workspace->load(['projects' => function ($query) {
+            $query->where('status', '!=', 'archived')
+                  ->orWhereNull('status');
+        }]);
+
         return view('workspace.index', compact('workspace', 'isOwner', 'isAdmin', 'isWorkspaceUser'));
     }
 
@@ -43,7 +49,8 @@ class WorkareaController extends Controller
             ]);
 
             $validated['workspace_id'] = $workspace->id;
-            $validated['created_by'] = $request->user()->id;
+            // Project owner should always be the workspace owner, not the user who created it
+            $validated['created_by'] = $workspace->owner_id;
 
             Project::create($validated);
 

@@ -77,6 +77,7 @@ Route::middleware('auth')->group(function () {
     // Archive route
     Route::get('/archive', [ArchiveController::class, 'index'])->name('archive.index');
     Route::get('/workspaces/{workspace}/archive', [ArchiveController::class, 'workspaceArchive'])->name('workspace.archive');
+    Route::get('/workspaces/{workspace}/unarchive', [ArchiveController::class, 'workspaceUnarchive'])->name('workspace.unarchive');
 
     // Debug route to check workspace users status
     Route::get('/debug/workspace-users/{workspace}', function (Workspace $workspace) {

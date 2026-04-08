@@ -68,4 +68,23 @@ class ArchiveController extends Controller
 
         return view('archive.workspace', compact('projects', 'workspace'));
     }
+
+    public function workspaceUnarchive(Request $request, Workspace $workspace)
+    {
+        $user = $request->user();
+
+        // Check if user is admin (not owner) for this workspace
+        if (!$user->isWorkspaceAdmin($workspace) || $user->isWorkspaceOwner($workspace)) {
+            abort(403);
+        }
+
+        // Get archived projects from this specific workspace
+        $projects = Project::where('status', 'archived')
+            ->where('workspace_id', $workspace->id)
+            ->with(['workspace', 'folders', 'owner'])
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        return view('archive.unarchive', compact('projects', 'workspace'));
+    }
 }

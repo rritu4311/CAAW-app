@@ -226,8 +226,13 @@ class User extends Authenticatable
         }
 
         // Workspace admins have read-only access, exclude them
-        if ($this->isWorkspaceAdmin($project) || $this->isWorkspaceOwner($project)) {
+        if ($this->isWorkspaceAdmin($project)) {
             return false;
+        }
+
+        // Workspace owners have full access
+        if ($this->isWorkspaceOwner($project)) {
+            return true;
         }
 
         $collaborator = $this->getProjectCollaborator($project);
@@ -251,8 +256,13 @@ class User extends Authenticatable
         }
 
         // Workspace admins have read-only access, exclude them
-        if ($this->isWorkspaceAdmin($project) || $this->isWorkspaceOwner($project)) {
+        if ($this->isWorkspaceAdmin($project)) {
             return false;
+        }
+
+        // Workspace owners have full access
+        if ($this->isWorkspaceOwner($project)) {
+            return true;
         }
 
         $collaborator = $this->getProjectCollaborator($project);
@@ -276,8 +286,13 @@ class User extends Authenticatable
         }
 
         // Workspace admins have read-only access, exclude them
-        if ($this->isWorkspaceAdmin($project) || $this->isWorkspaceOwner($project)) {
+        if ($this->isWorkspaceAdmin($project)) {
             return false;
+        }
+
+        // Workspace owners have full access
+        if ($this->isWorkspaceOwner($project)) {
+            return true;
         }
 
         $collaborator = $this->getProjectCollaborator($project);
@@ -289,7 +304,15 @@ class User extends Authenticatable
      */
     public function canManageCollaborators(Project $project): bool
     {
-        return $this->isProjectOwner($project) || $this->hasWorkspaceRole($project->workspace, ['user']);
+        return $this->isProjectOwner($project) || $this->hasWorkspaceRole($project->workspace, ['user']) || $this->isWorkspaceOwner($project);
+    }
+
+    /**
+     * Check if user can archive projects (Only workspace admins can archive).
+     */
+    public function canArchiveProject(Project $project): bool
+    {
+        return $this->isWorkspaceAdmin($project);
     }
 
     /**
