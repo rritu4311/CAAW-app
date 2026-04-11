@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 use App\Models\Asset;
+use App\Models\AssetVersion;
 use App\Models\Folder;
 use App\Models\Project;
 use App\Models\WorkspaceUser;
@@ -196,10 +197,56 @@ class FileUploadController extends Controller
                 'file_type' => $this->getFileType($mimeType),
                 'file_size' => $size,
                 'folder_id' => $folderId ? (int) $folderId : null,
-                'user_id' => auth()->id(),
                 'project_id' => $this->getProjectIdFromFolder($folderId),
                 'uploaded_by' => auth()->id(),
+                'version' => 1.0,
             ]);
+
+            Log::info('Asset created', [
+                'asset_id' => $asset->id,
+                'asset_name' => $asset->name,
+                'uploaded_by' => $asset->uploaded_by,
+                'version' => $asset->version,
+                'current_version_id' => $asset->current_version_id,
+            ]);
+
+            try {
+                // Create initial version record
+                $assetVersion = AssetVersion::create([
+                    'asset_id' => $asset->id,
+                    'version_number' => 1.0,
+                    'name' => $asset->name,
+                    'file_path' => $asset->file_path,
+                    'file_type' => $asset->file_type,
+                    'file_size' => $asset->file_size,
+                    'hash' => $hash,
+                    'status' => 'draft',
+                    'uploaded_by' => auth()->id(),
+                ]);
+
+                Log::info('AssetVersion created successfully', [
+                    'asset_version_id' => $assetVersion->id,
+                    'asset_id' => $assetVersion->asset_id,
+                    'version_number' => $assetVersion->version_number,
+                    'uploaded_by' => $assetVersion->uploaded_by,
+                    'hash' => $assetVersion->hash,
+                ]);
+
+                // Update asset with current version ID
+                $asset->update(['current_version_id' => $assetVersion->id]);
+
+                Log::info('Asset updated with current_version_id', [
+                    'asset_id' => $asset->id,
+                    'current_version_id' => $asset->current_version_id,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Failed to create AssetVersion', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                    'asset_id' => $asset->id,
+                ]);
+                throw $e;
+            }
 
             return [
                 'success' => true,
@@ -292,7 +339,6 @@ class FileUploadController extends Controller
             
             if ($folderId || $folder === 'root') {
                 $assets = Asset::where('folder_id', $folderId)
-                    ->where('user_id', auth()->id())
                     ->with('folder')
                     ->get();
                 
@@ -523,7 +569,6 @@ class FileUploadController extends Controller
         
         if ($folderId || $folder === 'root') {
             $assets = Asset::where('folder_id', $folderId)
-                ->where('user_id', auth()->id())
                 ->with('folder')
                 ->get();
             

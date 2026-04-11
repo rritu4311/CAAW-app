@@ -12,19 +12,18 @@ class Workflow extends Model
     use HasFactory;
 
     protected $fillable = [
+        'project_id',
         'name',
-        'description',
-        'is_sequential',
-        'created_by',
+        'definition',
     ];
 
     protected $casts = [
-        'is_sequential' => 'boolean',
+        'definition' => 'array',
     ];
 
-    public function creator(): BelongsTo
+    public function project(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(Project::class);
     }
 
     public function approvals(): HasMany

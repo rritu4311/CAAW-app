@@ -37,6 +37,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/folders/{folder}', [FolderController::class, 'destroy'])->name('folders.destroy');
     Route::post('/assets/move', [FolderController::class, 'moveAsset'])->name('assets.move');
     Route::get('/projects/{project}/folder-tree', [FolderController::class, 'getFolderTree'])->name('projects.folder-tree');
+    Route::get('/fix-asset-versions', [FolderController::class, 'fixAssetVersions'])->name('fix.asset.versions');
     
     // Workspace management routes
     Route::get('/workspaces', [WorkspaceController::class, 'index'])->name('workspaces.index');
@@ -134,6 +135,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/assets/{asset}/preview', [AssetPreviewController::class, 'preview'])->name('assets.preview');
     Route::get('/assets/{asset}/thumbnail/{size?}', [AssetPreviewController::class, 'thumbnail'])->name('assets.thumbnail');
     Route::get('/assets/{asset}/metadata', [AssetPreviewController::class, 'metadata'])->name('assets.metadata');
+    Route::get('/assets/{asset}', [FolderController::class, 'showAsset'])->name('assets.show');
+    Route::get('/assets', [FolderController::class, 'indexAssets'])->name('assets.index');
+    
+    // Asset approval workflow routes
+    Route::post('/assets/{asset}/submit-for-review', [FolderController::class, 'submitForReview'])->name('assets.submit-for-review');
+    Route::post('/assets/{asset}/approve', [FolderController::class, 'approveAsset'])->name('assets.approve');
+    Route::post('/assets/{asset}/reject', [FolderController::class, 'rejectAsset'])->name('assets.reject');
+    Route::post('/assets/{asset}/request-changes', [FolderController::class, 'requestChanges'])->name('assets.request-changes');
+
+    // Annotation routes
+    Route::post('/assets/{asset}/annotations', [FolderController::class, 'storeAnnotation'])->name('assets.annotations.store');
+    Route::put('/assets/{asset}/annotations/{annotation}', [FolderController::class, 'updateAnnotation'])->name('assets.annotations.update');
+    Route::delete('/assets/{asset}/annotations/{annotation}', [FolderController::class, 'deleteAnnotation'])->name('assets.annotations.delete');
 });
 
 

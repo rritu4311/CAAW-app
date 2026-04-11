@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 use App\Models\Folder;
 use App\Models\Asset;
+use App\Models\AssetVersion;
 use App\Models\Project;
 use App\Models\WorkspaceUser;
 use Illuminate\Http\Request;
@@ -155,15 +156,39 @@ class FolderController extends Controller
 
     public function show(Folder $folder)
     {
-        // Load folder with children, parent, project, and assets hierarchy
-        $folder->load(['children', 'parent', 'project', 'assets']);
-        
+        // Load folder with children, parent, and project
+        $folder->load(['children', 'parent', 'project']);
+
+        // Filter assets based on user role
+        $user = auth()->user();
+        $assetsQuery = $folder->assets();
+
+        // Check if user is a reviewer/admin for this project
+        $isReviewer = $user->canApproveInProject($folder->project);
+        $isUploader = $user->canUploadToProject($folder->project);
+
+        if ($isReviewer && !$isUploader) {
+            // User is only a reviewer - don't show draft assets
+            $assetsQuery->where('status', '!=', 'draft');
+        } elseif ($isReviewer && $isUploader) {
+            // User is both reviewer and uploader - show in_review assets + their own draft assets
+            $assetsQuery->where(function($query) use ($user) {
+                $query->where('status', '!=', 'draft')
+                      ->orWhere('uploaded_by', $user->id);
+            });
+        } elseif (!$isReviewer && $isUploader) {
+            // User is only an uploader - show only their own assets
+            $assetsQuery->where('uploaded_by', $user->id);
+        }
+
+        $folder->setRelation('assets', $assetsQuery->get());
+
         // Get breadcrumb path
         $breadcrumbs = $this->getBreadcrumbs($folder);
-        
+
         // Check if user has read-only access (workspace admin without write permissions)
         $readOnly = !$this->hasWriteAccess($folder->project, auth()->user());
-        
+
         return view('folder.show', compact('folder', 'breadcrumbs', 'readOnly'));
     }
 
@@ -491,7 +516,54 @@ class FolderController extends Controller
                 'folder_id' => $folderId,
                 'project_id' => $this->getProjectIdFromFolder($folderId),
                 'uploaded_by' => auth()->id(),
+                'version' => 1.0,
             ]);
+
+            \Log::info('Asset created in FolderController', [
+                'asset_id' => $asset->id,
+                'asset_name' => $asset->name,
+                'uploaded_by' => $asset->uploaded_by,
+                'version' => $asset->version,
+                'current_version_id' => $asset->current_version_id,
+            ]);
+
+            try {
+                // Create initial version record
+                $assetVersion = \App\Models\AssetVersion::create([
+                    'asset_id' => $asset->id,
+                    'version_number' => 1.0,
+                    'name' => $asset->name,
+                    'file_path' => $asset->file_path,
+                    'file_type' => $asset->file_type,
+                    'file_size' => $asset->file_size,
+                    'hash' => $hash,
+                    'status' => 'draft',
+                    'uploaded_by' => auth()->id(),
+                ]);
+
+                \Log::info('AssetVersion created in FolderController', [
+                    'asset_version_id' => $assetVersion->id,
+                    'asset_id' => $assetVersion->asset_id,
+                    'version_number' => $assetVersion->version_number,
+                    'uploaded_by' => $assetVersion->uploaded_by,
+                    'hash' => $assetVersion->hash,
+                ]);
+
+                // Update asset with current version ID
+                $asset->update(['current_version_id' => $assetVersion->id]);
+
+                \Log::info('Asset updated with current_version_id in FolderController', [
+                    'asset_id' => $asset->id,
+                    'current_version_id' => $asset->current_version_id,
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Failed to create AssetVersion in FolderController', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                    'asset_id' => $asset->id,
+                ]);
+                throw $e;
+            }
 
             return [
                 'success' => true,
@@ -630,5 +702,320 @@ class FolderController extends Controller
             ->get();
 
         return response()->json($folders);
+    }
+
+    /**
+     * Show asset details page.
+     */
+    public function showAsset(Asset $asset)
+    {
+        // Load asset with folder, project, and annotations relationships
+        $asset->load(['folder', 'folder.project', 'uploadedBy', 'annotations', 'annotations.comments', 'comments']);
+
+        // Check if user has access to this asset
+        $project = $asset->folder ? $asset->folder->project : null;
+        if ($project) {
+            // Check if user is project owner or collaborator
+            $isOwner = $project->isOwnedBy(auth()->user());
+            $isCollaborator = $project->getCollaborator(auth()->user()) !== null;
+
+            if (!$isOwner && !$isCollaborator) {
+                abort(403, 'You do not have access to this asset');
+            }
+        }
+
+        return view('assets.show', compact('asset'));
+    }
+
+    /**
+     * Show all assets index page.
+     */
+    public function indexAssets()
+    {
+        $user = auth()->user();
+        
+        // Get all workspaces the user has access to
+        $workspaceIds = \App\Models\WorkspaceUser::where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->pluck('workspace_id');
+        
+        // Get all projects in those workspaces
+        $projectIds = \App\Models\Project::whereIn('workspace_id', $workspaceIds)
+            ->pluck('id');
+        
+        // Get all assets from those projects
+        $assets = Asset::whereIn('project_id', $projectIds)
+            ->with(['folder', 'folder.project', 'uploadedBy'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+        
+        return view('assets.index', compact('assets'));
+    }
+
+    /**
+     * Fix existing assets without versions
+     */
+    public function fixAssetVersions()
+    {
+        $assetsWithoutVersions = Asset::whereNull('current_version_id')->get();
+
+        foreach ($assetsWithoutVersions as $asset) {
+            try {
+                $assetVersion = AssetVersion::create([
+                    'asset_id' => $asset->id,
+                    'version_number' => $asset->version ?? 1.0,
+                    'name' => $asset->name,
+                    'file_path' => $asset->file_path,
+                    'file_type' => $asset->file_type,
+                    'file_size' => $asset->file_size,
+                    'hash' => hash_file('sha256', storage_path('app/public/' . $asset->file_path)),
+                    'status' => $asset->status ?? 'draft',
+                    'uploaded_by' => $asset->uploaded_by,
+                ]);
+
+                $asset->update(['current_version_id' => $assetVersion->id]);
+
+                \Log::info('Fixed asset version', [
+                    'asset_id' => $asset->id,
+                    'asset_version_id' => $assetVersion->id,
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Failed to fix asset version', [
+                    'asset_id' => $asset->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return redirect()->back()->with('success', "Fixed " . count($assetsWithoutVersions) . " assets without versions");
+    }
+
+    /**
+     * Submit asset for review.
+     */
+    public function submitForReview(Request $request, Asset $asset)
+    {
+        // Check if user can submit (must be asset creator or have write access)
+        $project = $asset->folder ? $asset->folder->project : null;
+        if (!$project || !$this->hasWriteAccess($project, $request->user())) {
+            return redirect()->back()->with('error', 'You do not have permission to submit this asset for review');
+        }
+
+        if (!$asset->submitForReview()) {
+            return redirect()->back()->with('error', 'Failed to submit asset for review. Asset must be in draft status.');
+        }
+
+        return redirect()->back()->with('success', 'Asset submitted for review successfully');
+    }
+
+    /**
+     * Approve asset.
+     */
+    public function approveAsset(Request $request, Asset $asset)
+    {
+        // Check if user can approve using policy
+        if (!auth()->user()->can('approve', $asset)) {
+            return redirect()->back()->with('error', 'You are not authorized to approve this asset');
+        }
+
+        if (!$asset->approve()) {
+            return redirect()->back()->with('error', 'Failed to approve asset');
+        }
+
+        return redirect()->back()->with('success', 'Asset approved successfully');
+    }
+
+    /**
+     * Reject asset.
+     */
+    public function rejectAsset(Request $request, Asset $asset)
+    {
+        // Check if user can reject using policy
+        if (!auth()->user()->can('reject', $asset)) {
+            return redirect()->back()->with('error', 'You are not authorized to reject this asset');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'reason' => 'nullable|string|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        if (!$asset->reject($request->input('reason') ?? '')) {
+            return redirect()->back()->with('error', 'Failed to reject asset');
+        }
+
+        // Store rejection reason in asset version notes
+        if ($asset->currentVersion) {
+            $asset->currentVersion->update(['notes' => $request->input('reason')]);
+        }
+
+        return redirect()->back()->with('success', 'Asset rejected successfully');
+    }
+
+    /**
+     * Request changes for asset.
+     */
+    public function requestChanges(Request $request, Asset $asset)
+    {
+        // Check if user can request changes using policy
+        if (!auth()->user()->can('requestChanges', $asset)) {
+            return redirect()->back()->with('error', 'You are not authorized to request changes for this asset');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'comments' => 'required|string|max:1000',
+            'annotation_id' => 'nullable|exists:annotations,id',
+            'annotation_x' => 'nullable|numeric',
+            'annotation_y' => 'nullable|numeric',
+            'annotation_width' => 'nullable|numeric',
+            'annotation_height' => 'nullable|numeric',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        if (!$asset->requestChanges($request->input('comments'))) {
+            return redirect()->back()->with('error', 'Failed to request changes');
+        }
+
+        // Store comments in asset version notes
+        if ($asset->currentVersion) {
+            $asset->currentVersion->update(['notes' => $request->input('comments')]);
+        }
+
+        // Create annotation if coordinates are provided
+        $annotationId = $request->input('annotation_id');
+        if ($request->filled('annotation_x') && $request->filled('annotation_y')) {
+            $annotation = \App\Models\Annotation::create([
+                'asset_id' => $asset->id,
+                'x' => $request->input('annotation_x'),
+                'y' => $request->input('annotation_y'),
+                'width' => $request->input('annotation_width'),
+                'height' => $request->input('annotation_height'),
+                'status' => 'pending',
+                'created_by' => auth()->id(),
+            ]);
+            $annotationId = $annotation->id;
+        }
+
+        // Create a comment in the comments table for the change request
+        \App\Models\Comment::create([
+            'asset_id' => $asset->id,
+            'user_id' => auth()->id(),
+            'text' => $request->input('comments'),
+            'annotation_id' => $annotationId,
+            'mentioned_users' => null,
+        ]);
+
+        // If annotation was created or annotation_id was provided, update annotation status
+        if ($annotationId) {
+            $annotation = \App\Models\Annotation::find($annotationId);
+            if ($annotation && $annotation->asset_id === $asset->id) {
+                $annotation->status = 'pending';
+                $annotation->save();
+            }
+        }
+
+        return redirect()->back()->with('success', 'Changes requested successfully');
+    }
+
+    /**
+     * Store annotation for an asset.
+     */
+    public function storeAnnotation(Request $request, Asset $asset)
+    {
+        // Check if user can add annotation using policy
+        if (!auth()->user()->can('addAnnotation', $asset)) {
+            return response()->json(['error' => 'You are not authorized to add annotations to this asset'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'x' => 'required|numeric',
+            'y' => 'required|numeric',
+            'width' => 'nullable|numeric',
+            'height' => 'nullable|numeric',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => 'Invalid annotation data'], 422);
+        }
+
+        $annotation = \App\Models\Annotation::create([
+            'asset_id' => $asset->id,
+            'x' => $request->input('x'),
+            'y' => $request->input('y'),
+            'width' => $request->input('width'),
+            'height' => $request->input('height'),
+            'status' => 'pending',
+            'created_by' => auth()->id(),
+        ]);
+
+        return response()->json(['success' => true, 'annotation' => $annotation]);
+    }
+
+    /**
+     * Update annotation.
+     */
+    public function updateAnnotation(Request $request, Asset $asset, \App\Models\Annotation $annotation)
+    {
+        // Check if user can update annotation
+        if ($annotation->created_by !== auth()->id()) {
+            return response()->json(['error' => 'You are not authorized to update this annotation'], 403);
+        }
+
+        // Check if user has access to the asset
+        if (!auth()->user()->can('view', $asset)) {
+            return response()->json(['error' => 'You do not have access to this asset'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'x' => 'nullable|numeric',
+            'y' => 'nullable|numeric',
+            'width' => 'nullable|numeric',
+            'height' => 'nullable|numeric',
+            'status' => 'nullable|in:pending,acknowledged,resolved',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => 'Invalid annotation data'], 422);
+        }
+
+        $annotation->update([
+            'x' => $request->input('x', $annotation->x),
+            'y' => $request->input('y', $annotation->y),
+            'width' => $request->input('width', $annotation->width),
+            'height' => $request->input('height', $annotation->height),
+            'status' => $request->input('status', $annotation->status),
+        ]);
+
+        return response()->json(['success' => true, 'annotation' => $annotation]);
+    }
+
+    /**
+     * Delete annotation.
+     */
+    public function deleteAnnotation(Request $request, Asset $asset, \App\Models\Annotation $annotation)
+    {
+        // Check if user can delete annotation
+        if ($annotation->created_by !== auth()->id()) {
+            return response()->json(['error' => 'You are not authorized to delete this annotation'], 403);
+        }
+
+        // Check if user has access to the asset
+        if (!auth()->user()->can('view', $asset)) {
+            return response()->json(['error' => 'You do not have access to this asset'], 403);
+        }
+
+        $annotation->delete();
+
+        return response()->json(['success' => true]);
     }
 }

@@ -5,97 +5,44 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Models\AssetVersion;
 
-class Asset extends Model
+class AssetVersion extends Model
 {
-    protected $table = 'assets';
+    protected $table = 'asset_versions';
 
     protected $fillable = [
-        'project_id',
-        'folder_id',
+        'asset_id',
+        'version_number',
         'name',
         'file_path',
         'file_type',
         'file_size',
+        'hash',
         'status',
         'uploaded_by',
-        'version',
-        'current_version_id'
+        'notes',
     ];
 
     protected $casts = [
         'file_size' => 'integer',
-        'folder_id' => 'integer',
+        'version_number' => 'float',
         'uploaded_by' => 'integer',
-        'project_id' => 'integer',
-        'version' => 'float',
-        'current_version_id' => 'integer',
+        'asset_id' => 'integer',
     ];
 
-    public function folder(): BelongsTo
+    public function asset(): BelongsTo
     {
-        return $this->belongsTo(Folder::class);
+        return $this->belongsTo(Asset::class);
     }
 
     public function uploadedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
     }
-    
-    public function project(): BelongsTo
-    {
-        return $this->belongsTo(Project::class);
-    }
-
-    public function approvals(): HasMany
-    {
-        return $this->hasMany(Approval::class);
-    }
-
-    public function pendingApprovals(): HasMany
-    {
-        return $this->hasMany(Approval::class)->where('status', 'pending');
-    }
-
-    public function versions(): HasMany
-    {
-        return $this->hasMany(AssetVersion::class)->orderBy('version_number', 'desc');
-    }
-
-    public function currentVersion(): BelongsTo
-    {
-        return $this->belongsTo(AssetVersion::class, 'current_version_id');
-    }
-
-    public function annotations(): HasMany
-    {
-        return $this->hasMany(Annotation::class)->orderBy('created_at', 'desc');
-    }
-
-    public function comments(): HasMany
-    {
-        return $this->hasMany(Comment::class)->whereNull('annotation_id')->orderBy('created_at', 'desc');
-    }
 
     public function getFormattedVersionAttribute(): string
     {
-        return 'v' . number_format($this->version, 1);
-    }
-
-    public function isImage(): bool
-    {
-        return $this->file_type === 'image';
-    }
-
-    public function isVideo(): bool
-    {
-        return $this->file_type === 'video';
-    }
-
-    public function isDocument(): bool
-    {
-        return in_array($this->file_type, ['pdf', 'doc']);
+        return 'v' . number_format($this->version_number, 1);
     }
 
     public function getFormattedSizeAttribute(): string
@@ -139,7 +86,7 @@ class Asset extends Model
             return false;
         }
 
-        $this->status = 'rejected';
+        $this->status = 'draft';
         $this->save();
         return true;
     }
@@ -151,6 +98,7 @@ class Asset extends Model
         }
 
         $this->status = 'draft';
+        $this->notes = $comments;
         $this->save();
         return true;
     }

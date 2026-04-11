@@ -10,6 +10,17 @@
             <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white dark:bg-gray-800">
 
+                    <!-- Back Button -->
+                    <div class="mb-4">
+                        <a href="{{ route('workspaces.show', $project->workspace) }}" 
+                           class="inline-flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                            </svg>
+                            Back to {{ $project->workspace->name }}
+                        </a>
+                    </div>
+
                     <div class="flex justify-between items-center mb-6">
                         <div>
                             <div class="flex items-center gap-3 mb-4">

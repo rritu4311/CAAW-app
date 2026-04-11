@@ -10,6 +10,27 @@
             <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white dark:bg-gray-800">
 
+                    <!-- Back Button -->
+                    <div class="mb-4">
+                        @if($folder->parent)
+                            <a href="{{ route('folders.show', $folder->parent->id) }}" 
+                               class="inline-flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                                </svg>
+                                Back to {{ $folder->parent->name }}
+                            </a>
+                        @else
+                            <a href="{{ route('projects.show', $folder->project->id) }}" 
+                               class="inline-flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                                </svg>
+                                Back to {{ $folder->project->name }}
+                            </a>
+                        @endif
+                    </div>
+
                     <!-- Breadcrumb Navigation -->
                     <nav class="flex items-center space-x-2 text-sm mb-6">
                         <a href="{{ route('projects.show', $folder->project->id) }}" class="text-blue-600 hover:text-blue-800">
@@ -272,8 +293,8 @@
                                         <!-- Actions -->
                                         <div class="flex items-center gap-2 flex-shrink-0">
                                             @if(in_array($asset->file_type, ['image', 'video', 'pdf', 'doc', 'docx', 'xlsx', 'xls', 'csv', 'txt', 'md', 'markdown']))
-                                                <button x-data @click="$dispatch('open-file-viewer', { src: '{{ Storage::url($asset->file_path) }}', type: '{{ $asset->file_type }}', name: '{{ $asset->name }}', size: '{{ $asset->formatted_size }}' })" 
-                                                    class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors">View</button>
+                                                <a href="{{ route('assets.show', $asset->id) }}" 
+                                                    class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors">View</a>
                                             @endif
                                             <a href="{{ Storage::url($asset->file_path) }}" download="{{ $asset->name }}" 
                                                 class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded transition-colors">Download</a>

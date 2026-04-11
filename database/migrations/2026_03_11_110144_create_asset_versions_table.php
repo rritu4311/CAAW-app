@@ -14,9 +14,21 @@ return new class extends Migration
         Schema::create('asset_versions', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('asset_id');
-            $table->integer('version_number');
+            $table->float('version_number');
+            $table->string('name');
             $table->string('file_path');
+            $table->enum('file_type', ['image', 'video', 'pdf', 'doc']);
+            $table->bigInteger('file_size')->nullable();
+            $table->string('hash')->nullable();
+            $table->enum('status', [
+                'draft',
+                'in_review',
+                'approved',
+                'rejected',
+                'changes_requested'
+            ])->default('draft');
             $table->unsignedBigInteger('uploaded_by');
+            $table->text('notes')->nullable();
             $table->timestamps();
 
             // Foreign keys
@@ -29,9 +41,6 @@ return new class extends Migration
                   ->references('id')
                   ->on('users')
                   ->onDelete('cascade');
-
-            // Prevent duplicate version numbers for same asset
-            $table->unique(['asset_id', 'version_number']);
         });
     }
 
