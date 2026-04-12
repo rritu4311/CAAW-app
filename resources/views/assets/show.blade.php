@@ -37,23 +37,23 @@
                 <!-- Asset Preview Section -->
                 <div class="p-6">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        
-                        <!-- Preview Area -->
-                        <div class="lg:col-span-2">
+
+                        <!-- Preview Area (Left Column) -->
+                        <div class="lg:col-span-1">
                             <div class="relative bg-gray-50 dark:bg-gray-900 rounded-lg p-4 flex items-center justify-center" style="min-height: calc(100vh - 80px);">
                                 <!-- Full-screen button -->
-                                <button onclick="toggleFullscreen('asset-preview')" 
+                                <button onclick="toggleFullscreen('asset-preview')"
                                         class="absolute top-2 right-2 z-10 p-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg shadow-lg transition-colors"
                                         title="Toggle Full Screen">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
                                     </svg>
                                 </button>
-                                
+
                                 <div id="asset-preview" class="w-full h-full flex items-center justify-center">
                                     @if($asset->file_type === 'image')
-                                        <img src="{{ Storage::url($asset->file_path) }}" 
-                                             alt="{{ $asset->name }}" 
+                                        <img src="{{ Storage::url($asset->file_path) }}"
+                                             alt="{{ $asset->name }}"
                                              class="max-w-full object-contain rounded-lg shadow-lg" style="max-height: calc(100vh - 100px);">
                                     @elseif($asset->file_type === 'video')
                                         <video controls class="max-w-full rounded-lg shadow-lg" style="max-height: calc(100vh - 100px);">
@@ -61,7 +61,7 @@
                                             Your browser does not support the video tag.
                                         </video>
                                     @elseif($asset->file_type === 'pdf')
-                                        <iframe src="{{ Storage::url($asset->file_path) }}" 
+                                        <iframe src="{{ Storage::url($asset->file_path) }}"
                                                 class="w-full rounded-lg border-0"
                                                 style="height: calc(100vh - 80px);"
                                                 type="application/pdf"></iframe>
@@ -80,7 +80,7 @@
                                         </div>
                                         <h3 class="text-xl font-semibold text-gray-800 dark:text-white mb-2">{{ $asset->name }}</h3>
                                         <p class="text-gray-500 dark:text-gray-400 mb-6">This file type cannot be previewed directly in the browser.</p>
-                                        <a href="{{ Storage::url($asset->file_path) }}" download="{{ $asset->name }}" 
+                                        <a href="{{ Storage::url($asset->file_path) }}" download="{{ $asset->name }}"
                                            class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -89,7 +89,7 @@
                                         </a>
                                     </div>
                                 @elseif(in_array($asset->file_type, ['txt', 'md', 'markdown']))
-                                    <iframe src="{{ Storage::url($asset->file_path) }}" 
+                                    <iframe src="{{ Storage::url($asset->file_path) }}"
                                             class="w-full rounded-lg border-0 bg-white"
                                             style="height: calc(100vh - 80px);"></iframe>
                                 @else
@@ -101,7 +101,7 @@
                                         </div>
                                         <h3 class="text-xl font-semibold text-gray-800 dark:text-white mb-2">{{ $asset->name }}</h3>
                                         <p class="text-gray-500 dark:text-gray-400 mb-6">Preview not available for this file type.</p>
-                                        <a href="{{ Storage::url($asset->file_path) }}" download="{{ $asset->name }}" 
+                                        <a href="{{ Storage::url($asset->file_path) }}" download="{{ $asset->name }}"
                                            class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -114,7 +114,7 @@
                             </div>
                         </div>
 
-                        <!-- Asset Information Sidebar -->
+                        <!-- Asset Information (Middle Column) -->
                         <div class="lg:col-span-1">
                             <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-6">
                                 <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Asset Information</h3>
@@ -242,14 +242,20 @@
                                         </div>
                                     @endif
                                 </div>
+                            </div>
+                        </div>
 
-                                <!-- Annotations Section (only for images) -->
-                                @if($asset->isImage() && $asset->annotations && $asset->annotations->count() > 0)
-                                    <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <!-- Right Sidebar (Annotations, Version History, Actions) -->
+                        <div class="lg:col-span-1">
+                            <div class="space-y-6">
+
+                                <!-- Annotations Section (only for images and asset owner) -->
+                                @if($asset->isImage() && $asset->annotations && $asset->annotations->count() > 0 && auth()->check() && auth()->id() === $asset->uploaded_by)
+                                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-6">
                                         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Annotations</h3>
                                         <div class="space-y-4">
                                             @foreach($asset->annotations as $annotation)
-                                                <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                                                <div class="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                                                     <div class="flex items-start justify-between mb-3">
                                                         <div class="flex items-center gap-2">
                                                             @if($annotation->isPending())
@@ -278,7 +284,7 @@
                                                     @if($annotation->comments && $annotation->comments->count() > 0)
                                                         <div class="space-y-2 mt-3">
                                                             @foreach($annotation->comments as $comment)
-                                                                <div class="p-3 bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-600">
+                                                                <div class="p-3 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-600">
                                                                     <div class="flex items-center gap-2 mb-1">
                                                                         <span class="text-xs font-medium text-gray-900 dark:text-white">{{ $comment->user->name ?? 'Unknown' }}</span>
                                                                         <span class="text-xs text-gray-500 dark:text-gray-400">{{ $comment->created_at->format('M d, Y - g:i A') }}</span>
@@ -294,13 +300,13 @@
                                     </div>
                                 @endif
 
-                                <!-- General Comments Section (not linked to annotations) -->
-                                @if($asset->comments && $asset->comments->whereNull('annotation_id')->count() > 0)
-                                    <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                <!-- General Comments Section (not linked to annotations, only for asset owner) -->
+                                @if($asset->comments && $asset->comments->whereNull('annotation_id')->count() > 0 && auth()->check() && auth()->id() === $asset->uploaded_by)
+                                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-6">
                                         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Comments</h3>
                                         <div class="space-y-3">
                                             @foreach($asset->comments->whereNull('annotation_id') as $comment)
-                                                <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                                                <div class="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                                                     <div class="flex items-center gap-2 mb-2">
                                                         <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $comment->user->name ?? 'Unknown' }}</span>
                                                         <span class="text-xs text-gray-500 dark:text-gray-400">{{ $comment->created_at->format('M d, Y - g:i A') }}</span>
@@ -312,8 +318,65 @@
                                     </div>
                                 @endif
 
+                                <!-- Version History Section -->
+                                @if($asset->versions && $asset->versions->count() > 0)
+                                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-6">
+                                        <div class="flex items-center justify-between mb-4">
+                                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Version History</h3>
+                                            @if(auth()->check() && auth()->id() === $asset->uploaded_by)
+                                                <button onclick="document.getElementById('uploadVersionModal').style.display='flex'"
+                                                        class="text-sm px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors">
+                                                    Upload New Version
+                                                </button>
+                                            @endif
+                                        </div>
+                                        <div class="overflow-x-auto">
+                                            <table class="w-full text-sm">
+                                                <thead>
+                                                    <tr class="border-b border-gray-200 dark:border-gray-700">
+                                                        <th class="text-left py-2 px-3 text-gray-600 dark:text-gray-400 font-medium">Version</th>
+                                                        <th class="text-left py-2 px-3 text-gray-600 dark:text-gray-400 font-medium">File Size</th>
+                                                        <th class="text-left py-2 px-3 text-gray-600 dark:text-gray-400 font-medium">Uploaded By</th>
+                                                        <th class="text-left py-2 px-3 text-gray-600 dark:text-gray-400 font-medium">Date</th>
+                                                        <th class="text-center py-2 px-3 text-gray-600 dark:text-gray-400 font-medium">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @php
+                                                        $versionsToShow = (auth()->check() && auth()->id() === $asset->uploaded_by)
+                                                            ? $asset->versions->sortByDesc('version_number')
+                                                            : $asset->versions->filter(function($v) use ($asset) { return $v->id === $asset->current_version_id; });
+                                                    @endphp
+                                                    @foreach($versionsToShow as $version)
+                                                        <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                                                            <td class="py-2 px-3">
+                                                                <span class="font-medium {{ $version->id === $asset->current_version_id ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300' }}">
+                                                                    {{ $version->formatted_version }}
+                                                                    @if($version->id === $asset->current_version_id)
+                                                                        <span class="ml-1 text-xs">(Current)</span>
+                                                                    @endif
+                                                                </span>
+                                                            </td>
+                                                            <td class="py-2 px-3 text-gray-600 dark:text-gray-400">{{ $version->formatted_size }}</td>
+                                                            <td class="py-2 px-3 text-gray-600 dark:text-gray-400">{{ $version->uploadedBy->name ?? 'Unknown' }}</td>
+                                                            <td class="py-2 px-3 text-gray-600 dark:text-gray-400">{{ $version->created_at->format('M d, Y') }}</td>
+                                                            <td class="py-2 px-3 text-center">
+                                                                <a href="{{ route('assets.view-version', ['asset' => $asset->id, 'version' => $version->id]) }}"
+                                                                   class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors">
+                                                                    View
+                                                                </a>
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                @endif
+
                                 <!-- Actions -->
-                                <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-6">
+                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Actions</h3>
                                     <div class="space-y-3">
                                         <!-- Approval Workflow Buttons -->
                                         @if($asset->isDraft())
@@ -420,6 +483,7 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -550,6 +614,47 @@
                 <img src="{{ Storage::url($asset->file_path) }}" alt="{{ $asset->name }}" id="viewerImage" class="max-w-full h-auto" style="max-height: 500px;">
                 <div id="viewerAnnotationBox" class="absolute border-4 border-red-500 bg-red-500 bg-opacity-30 pointer-events-none" style="display: none;"></div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload New Version Modal -->
+<div id="uploadVersionModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Upload New Version</h3>
+                <button type="button" onclick="document.getElementById('uploadVersionModal').style.display='none'"
+                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <form method="POST" action="{{ route('assets.upload-version', $asset->id) }}" enctype="multipart/form-data">
+                @csrf
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Select File
+                    </label>
+                    <input type="file" name="file" required
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                           accept="{{ $asset->file_type === 'image' ? 'image/*' : ($asset->file_type === 'video' ? 'video/*' : ($asset->file_type === 'pdf' ? '.pdf' : '.doc,.docx,.xlsx,.xls')) }}">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        File type must match the original asset ({{ $asset->file_type }})
+                    </p>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="document.getElementById('uploadVersionModal').style.display='none'"
+                            class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        Upload Version
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

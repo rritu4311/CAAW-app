@@ -89,11 +89,12 @@ class ProjectCollaborator extends Model
     }
 
     /**
-     * Check if this collaborator can upload assets (admin, reviewer).
+     * Check if this collaborator can upload assets (only owner).
+     * Admin, Reviewer, and Viewer have restricted access (read-only).
      */
     public function canUpload(): bool
     {
-        return in_array($this->role, ['admin', 'reviewer']) && $this->isApproved();
+        return $this->role === 'owner' && $this->isApproved();
     }
 
     /**

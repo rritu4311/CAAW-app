@@ -10,6 +10,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ThemeController;
 use App\Http\Controllers\AssetPreviewController;
 use App\Http\Controllers\ArchiveController;
+use App\Http\Controllers\DashboardController;
 use App\Models\Workspace;
 use App\Models\Project;
 use Illuminate\Support\Facades\Route;
@@ -18,9 +19,7 @@ Route::get('/', function () {
     return auth()->check() ? redirect()->route('dashboard') : redirect()->route('login');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -148,6 +147,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/assets/{asset}/annotations', [FolderController::class, 'storeAnnotation'])->name('assets.annotations.store');
     Route::put('/assets/{asset}/annotations/{annotation}', [FolderController::class, 'updateAnnotation'])->name('assets.annotations.update');
     Route::delete('/assets/{asset}/annotations/{annotation}', [FolderController::class, 'deleteAnnotation'])->name('assets.annotations.delete');
+
+    // Asset version routes
+    Route::post('/assets/{asset}/upload-version', [FolderController::class, 'uploadNewVersion'])->name('assets.upload-version');
+    Route::get('/assets/{asset}/versions/{version}', [FolderController::class, 'viewVersion'])->name('assets.view-version');
 });
 
 

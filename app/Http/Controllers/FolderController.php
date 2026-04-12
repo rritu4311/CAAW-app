@@ -709,8 +709,8 @@ class FolderController extends Controller
      */
     public function showAsset(Asset $asset)
     {
-        // Load asset with folder, project, and annotations relationships
-        $asset->load(['folder', 'folder.project', 'uploadedBy', 'annotations', 'annotations.comments', 'comments']);
+        // Load asset with folder, project, annotations, and versions relationships
+        $asset->load(['folder', 'folder.project', 'uploadedBy', 'annotations', 'annotations.comments', 'comments', 'versions', 'currentVersion']);
 
         // Check if user has access to this asset
         $project = $asset->folder ? $asset->folder->project : null;
@@ -1017,5 +1017,131 @@ class FolderController extends Controller
         $annotation->delete();
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Upload a new version of an asset.
+     */
+    public function uploadNewVersion(Request $request, Asset $asset)
+    {
+        // Check write permissions
+        $project = $asset->folder ? $asset->folder->project : null;
+        if (!$project || !$this->hasWriteAccess($project, $request->user())) {
+            return redirect()->back()->with('error', 'You do not have permission to upload versions for this asset');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|file|max:512000', // 500MB max
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        try {
+            $file = $request->file('file');
+            $mimeType = $file->getMimeType();
+            $size = $file->getSize();
+
+            // Validate mime type matches the original asset
+            if (!in_array($mimeType, $this->allowedMimes)) {
+                return redirect()->back()->with('error', "File type '{$mimeType}' not allowed");
+            }
+
+            // Validate file type matches the original asset
+            $fileType = $this->getFileType($mimeType);
+            if ($fileType !== $asset->file_type) {
+                return redirect()->back()->with('error', 'File type must match the original asset');
+            }
+
+            // Validate size
+            $maxSize = $this->maxSizes[$fileType] ?? 50 * 1024 * 1024;
+            if ($size > $maxSize) {
+                $maxSizeMB = $maxSize / (1024 * 1024);
+                return redirect()->back()->with('error', "File size exceeds {$maxSizeMB}MB limit");
+            }
+
+            // Generate unique filename
+            $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
+            $hash = hash_file('sha256', $file->getPathname());
+
+            // Store file in the same folder as the original asset
+            $folderPath = dirname($asset->file_path);
+            $path = $file->storeAs($folderPath, $filename, 'public');
+
+            if (!$path) {
+                return redirect()->back()->with('error', 'Failed to store file');
+            }
+
+            // Calculate new version number (increment by 0.1)
+            $latestVersion = $asset->versions()->orderBy('version_number', 'desc')->first();
+            $newVersionNumber = $latestVersion ? round($latestVersion->version_number + 0.1, 1) : 1.0;
+
+            // Create new version record
+            $newVersion = AssetVersion::create([
+                'asset_id' => $asset->id,
+                'version_number' => $newVersionNumber,
+                'name' => $asset->name,
+                'file_path' => $path,
+                'file_type' => $fileType,
+                'file_size' => $size,
+                'hash' => $hash,
+                'status' => 'draft',
+                'uploaded_by' => auth()->id(),
+            ]);
+
+            // Update asset with new current version and version number
+            $asset->update([
+                'current_version_id' => $newVersion->id,
+                'version' => $newVersionNumber,
+                'file_path' => $path,
+                'file_size' => $size,
+            ]);
+
+            return redirect()->back()->with('success', 'New version uploaded successfully');
+
+        } catch (\Exception $e) {
+            Log::error('Error uploading new version', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'asset_id' => $asset->id,
+            ]);
+
+            return redirect()->back()->with('error', 'Failed to upload new version: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * View a specific version of an asset.
+     */
+    public function viewVersion(Asset $asset, AssetVersion $version)
+    {
+        // Check if version belongs to the asset
+        if ($version->asset_id !== $asset->id) {
+            abort(404, 'Version not found for this asset');
+        }
+
+        // Check if user has access to this asset
+        $project = $asset->folder ? $asset->folder->project : null;
+        if ($project) {
+            $isOwner = $project->isOwnedBy(auth()->user());
+            $isCollaborator = $project->getCollaborator(auth()->user()) !== null;
+
+            if (!$isOwner && !$isCollaborator) {
+                abort(403, 'You do not have access to this asset');
+            }
+        }
+
+        // Load asset with relationships
+        $asset->load(['folder', 'folder.project', 'uploadedBy', 'annotations', 'annotations.comments', 'comments', 'versions']);
+
+        // Override the current file path with the version's file path
+        $asset->file_path = $version->file_path;
+        $asset->file_size = $version->file_size;
+        $asset->version = $version->version_number;
+
+        return view('assets.show', compact('asset', 'version'));
     }
 }

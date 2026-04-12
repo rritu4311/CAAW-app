@@ -210,8 +210,8 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user can upload assets (Owner, User, Admin, Reviewer).
-     * Workspace admins have read-only access, so they cannot upload.
+     * Check if user can upload assets (Owner, User).
+     * Workspace admins, Admin, Reviewer, and Viewer collaborators have read-only access.
      * Users with 'user' role have full access like Owner.
      */
     public function canUploadToProject(Project $project): bool
@@ -235,13 +235,14 @@ class User extends Authenticatable
             return true;
         }
 
+        // Admin, Reviewer, and Viewer collaborators have restricted access
         $collaborator = $this->getProjectCollaborator($project);
-        return $collaborator !== null && in_array($collaborator->role, ['admin', 'reviewer']);
+        return false; // No upload access for any collaborator roles
     }
 
     /**
-     * Check if user can comment (Owner, User, Admin, Reviewer).
-     * Workspace admins have read-only access, so they cannot comment.
+     * Check if user can comment (Owner, User).
+     * Workspace admins, Admin, Reviewer, and Viewer collaborators have read-only access.
      * Users with 'user' role have full access like Owner.
      */
     public function canCommentOnProject(Project $project): bool
@@ -265,13 +266,14 @@ class User extends Authenticatable
             return true;
         }
 
+        // Admin, Reviewer, and Viewer collaborators have restricted access
         $collaborator = $this->getProjectCollaborator($project);
-        return $collaborator !== null && in_array($collaborator->role, ['admin', 'reviewer']);
+        return false; // No comment access for any collaborator roles
     }
 
     /**
-     * Check if user can approve/reject assets (Owner, User, Admin, Reviewer).
-     * Workspace admins have read-only access, so they cannot approve/reject.
+     * Check if user can approve/reject assets (Owner, User).
+     * Workspace admins, Admin, Reviewer, and Viewer collaborators have read-only access.
      * Users with 'user' role have full access like Owner.
      */
     public function canApproveInProject(Project $project): bool

@@ -320,16 +320,7 @@
                                                             <p class="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
                                                                 Move "{{ Str::limit($asset->name, 20) }}" to:
                                                             </p>
-                                                            <!-- Project Root -->
-                                                            <button type="button"
-                                                                onclick="quickMoveAsset({{ $asset->id }}, null, 'Project Root')"
-                                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors flex items-center {{ is_null($folder->id) ? 'opacity-50 cursor-not-allowed' : '' }}"
-                                                                {{ is_null($folder->id) ? 'disabled' : '' }}>
-                                                                <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                                                                </svg>
-                                                                <span>Project Root {{ is_null($folder->id) ? '(current)' : '' }}</span>
-                                                            </button>
+                                                            
                                                             <!-- Folders will be loaded dynamically -->
                                                             <div id="moveFolders{{ $asset->id }}" class="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
                                                                 <div class="px-3 py-2 text-center text-xs text-gray-400">

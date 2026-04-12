@@ -100,12 +100,13 @@ class Project extends Model
 
     /**
      * Check if user can upload assets to this project.
-     * Workspace User and Owner roles have full access.
+     * Only project owners and workspace users with 'user' or 'owner' role have full access.
+     * Admin, Reviewer, and Viewer collaborators have restricted access (read-only).
      */
     public function canUserUpload(User $user): bool
     {
-        // Project-level roles
-        if ($this->userHasRole($user, ['owner', 'admin', 'reviewer'])) {
+        // Only project owner has upload access at project level
+        if ($this->userHasRole($user, ['owner'])) {
             return true;
         }
 
