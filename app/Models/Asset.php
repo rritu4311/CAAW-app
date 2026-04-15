@@ -6,9 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\AssetVersion;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class Asset extends Model
 {
+    use LogsActivity;
+
     protected $table = 'assets';
 
     protected $fillable = [
@@ -23,6 +27,13 @@ class Asset extends Model
         'version',
         'current_version_id'
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'file_type', 'file_size', 'status', 'folder_id'])
+            ->logOnlyDirty();
+    }
 
     protected $casts = [
         'file_size' => 'integer',
@@ -163,7 +174,7 @@ class Asset extends Model
 
     public function isInReview(): bool
     {
-        return $this->status === 'in_review';
+        return $this->status === 'in_review' || $this->status === 'pending_approval';
     }
 
     public function isApproved(): bool
@@ -188,6 +199,6 @@ class Asset extends Model
 
     public function canBeApproved(): bool
     {
-        return $this->status === 'in_review';
+        return $this->status === 'in_review' || $this->status === 'pending_approval';
     }
 }

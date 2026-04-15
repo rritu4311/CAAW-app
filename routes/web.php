@@ -11,6 +11,7 @@ use App\Http\Controllers\ThemeController;
 use App\Http\Controllers\AssetPreviewController;
 use App\Http\Controllers\ArchiveController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\WorkflowController;
 use App\Models\Workspace;
 use App\Models\Project;
 use Illuminate\Support\Facades\Route;
@@ -20,10 +21,14 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard/pending-approvals', [DashboardController::class, 'pendingApprovals'])->middleware(['auth', 'verified'])->name('dashboard.pending-approvals');
+Route::get('/dashboard/comments', [DashboardController::class, 'comments'])->middleware(['auth', 'verified'])->name('dashboard.comments');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'changePassword'])->name('profile.password.update');
+    Route::patch('/profile/notifications', [ProfileController::class, 'updateNotifications'])->name('profile.notifications.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     
     // Folder management routes (pure Laravel)
@@ -50,6 +55,7 @@ Route::middleware('auth')->group(function () {
     })->name('workspaces.edit');
     Route::get('/workspaces/{workspace}/share', [WorkspaceController::class, 'share'])->name('workspaces.share');
     Route::post('/workspaces/{workspace}/invite', [WorkspaceController::class, 'invite'])->name('workspaces.invite');
+    Route::post('/workspaces/{workspace}/bulk-invite', [WorkspaceController::class, 'bulkInvite'])->name('workspaces.bulk-invite');
     Route::delete('/workspaces/{workspace}/members/{user}', [WorkspaceController::class, 'removeMember'])->name('workspaces.remove-member');
     Route::patch('/workspaces/{workspace}/members/{user}', [WorkspaceController::class, 'updateMemberRole'])->name('workspaces.update-member');
     Route::post('/workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');
@@ -121,6 +127,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
     Route::get('/projects/{project}/share', [ProjectController::class, 'share'])->name('projects.share');
     Route::post('/projects/{project}/invite', [ProjectController::class, 'invite'])->name('projects.invite');
+    Route::post('/projects/{project}/bulk-invite', [ProjectController::class, 'bulkInvite'])->name('projects.bulk-invite');
     Route::delete('/projects/{project}/members/{user}', [ProjectController::class, 'removeMember'])->name('projects.remove-member');
     Route::delete('/project-collaborators/{collaborator}', [ProjectController::class, 'removeCollaborator'])->name('projects.remove-collaborator');
     Route::post('/projects/{project}/accept-invitation', [ProjectController::class, 'acceptInvitation'])->name('projects.accept-invitation');
@@ -151,6 +158,18 @@ Route::middleware('auth')->group(function () {
     // Asset version routes
     Route::post('/assets/{asset}/upload-version', [FolderController::class, 'uploadNewVersion'])->name('assets.upload-version');
     Route::get('/assets/{asset}/versions/{version}', [FolderController::class, 'viewVersion'])->name('assets.view-version');
+
+    // Workflow management routes
+    Route::get('/projects/{project}/workflows/create', [WorkflowController::class, 'create'])->name('workflows.create');
+    Route::post('/projects/{project}/workflows', [WorkflowController::class, 'store'])->name('workflows.store');
+    Route::get('/workflows/{workflow}/edit', [WorkflowController::class, 'edit'])->name('workflows.edit');
+    Route::put('/workflows/{workflow}', [WorkflowController::class, 'update'])->name('workflows.update');
+    Route::get('/workflows/{workflow}', [WorkflowController::class, 'show'])->name('workflows.show');
+    Route::post('/workflows/{workflow}/apply-template', [WorkflowController::class, 'applyTemplate'])->name('workflows.apply-template');
+    Route::patch('/workflows/{workflow}/settings', [WorkflowController::class, 'updateSettings'])->name('workflows.update-settings');
+    Route::delete('/workflows/{workflow}', [WorkflowController::class, 'destroy'])->name('workflows.destroy');
+    Route::post('/assets/{asset}/start-workflow', [WorkflowController::class, 'startForAsset'])->name('assets.start-workflow');
+    Route::get('/projects/{project}/available-users', [WorkflowController::class, 'getAvailableUsers'])->name('workflows.available-users');
 });
 
 

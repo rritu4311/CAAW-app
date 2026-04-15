@@ -40,12 +40,12 @@
                 <form method="POST" action="{{ route('login') }}">
                     @csrf
 
-                    <!-- EMAIL -->
+                    <!-- EMAIL OR USERNAME -->
                     <div class="mb-3">
-                        <label class="form-label">Email</label>
-                        <input type="email" name="email"
+                        <label class="form-label">Username or Email</label>
+                        <input type="text" name="email"
                                class="form-control form-control-lg"
-                               placeholder="Enter your email" required>
+                               placeholder="Enter your username or email" required>
                     </div>
 
                     <!-- PASSWORD -->

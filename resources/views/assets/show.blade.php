@@ -34,6 +34,22 @@
                     </nav>
                 </div>
 
+                @if(session('error'))
+                    <div class="mx-6 mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                        {{ session('error') }}
+                    </div>
+                @endif
+
+                @if($errors->any())
+                    <div class="mx-6 mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                        <ul>
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
                 <!-- Asset Preview Section -->
                 <div class="p-6">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -380,9 +396,28 @@
                                     <div class="space-y-3">
                                         <!-- Approval Workflow Buttons -->
                                         @if($asset->isDraft())
-                                            <form method="POST" action="{{ route('assets.submit-for-review', $asset->id) }}" class="w-full mb-3">
+                                            @if($asset->folder && $asset->folder->project && $asset->folder->project->workflows->count() > 0)
+                                                <div class="mb-3">
+                                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Workflow</label>
+                                                    <select id="workflow-select" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" onchange="document.getElementById('workflow_id_hidden').value = this.value">
+                                                        <option value="">-- Choose a workflow --</option>
+                                                        @foreach($asset->folder->project->workflows->where('is_active', true) as $workflow)
+                                                            <option value="{{ $workflow->id }}">{{ $workflow->name }} ({{ ucfirst($workflow->type) }})</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <button onclick="startWorkflow({{ $asset->id }})"
+                                                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors mb-3">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                                                    </svg>
+                                                    Start Approval Workflow
+                                                </button>
+                                            @endif
+                                            <form method="POST" action="{{ route('assets.submit-for-review', $asset->id) }}" class="w-full mb-3" id="submit-for-review-form">
                                                 @csrf
-                                                <button type="submit" 
+                                                <input type="hidden" name="workflow_id" id="workflow_id_hidden" value="">
+                                                <button type="submit"
                                                         class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -392,7 +427,17 @@
                                             </form>
                                         @elseif($asset->isInReview())
                                             @auth
-                                                @if(auth()->user()->can('approve', $asset) && auth()->id() !== $asset->uploaded_by)
+                                                @php
+                                                    $canApprove = false;
+                                                    $userApproval = null;
+                                                    if (auth()->user()->can('approve', $asset) && auth()->id() !== $asset->uploaded_by) {
+                                                        $userApproval = $asset->approvals()->where('assigned_to', auth()->id())->first();
+                                                        if ($userApproval && $userApproval->canUserAct(auth()->id())) {
+                                                            $canApprove = true;
+                                                        }
+                                                    }
+                                                @endphp
+                                                @if($canApprove)
                                                     <div class="space-y-2">
                                                         <form method="POST" action="{{ route('assets.approve', $asset->id) }}" class="w-full">
                                                             @csrf
@@ -423,7 +468,13 @@
                                                     </div>
                                                 @else
                                                     <div class="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                                                        <p class="text-sm text-yellow-800 dark:text-yellow-300">Awaiting approval decision</p>
+                                                        <p class="text-sm text-yellow-800 dark:text-yellow-300">
+                                                            @if($userApproval && $userApproval->workflow && $userApproval->workflow->type === 'sequential')
+                                                                Your turn to approve will come after previous approvers complete their review
+                                                            @else
+                                                                Awaiting approval decision
+                                                            @endif
+                                                        </p>
                                                     </div>
                                                 @endif
                                             @endauth
@@ -444,6 +495,9 @@
                                                     </svg>
                                                     <p class="text-sm font-medium text-red-800 dark:text-red-300">Rejected</p>
                                                 </div>
+                                                @if($asset->approvals()->where('status', 'rejected')->first()?->decision_reason)
+                                                    <p class="text-xs text-red-600 dark:text-red-400 mt-2"><strong>Reason:</strong> {{ $asset->approvals()->where('status', 'rejected')->first()->decision_reason }}</p>
+                                                @endif
                                                 @if($asset->currentVersion && $asset->currentVersion->notes)
                                                     <p class="text-xs text-red-600 dark:text-red-400 mt-1">{{ $asset->currentVersion->notes }}</p>
                                                 @endif
@@ -456,6 +510,9 @@
                                                     </svg>
                                                     <p class="text-sm font-medium text-yellow-800 dark:text-yellow-300">Changes Requested</p>
                                                 </div>
+                                                @if($asset->approvals()->where('status', 'changes_requested')->first()?->decision_reason)
+                                                    <p class="text-xs text-yellow-600 dark:text-yellow-400 mt-2"><strong>Reason:</strong> {{ $asset->approvals()->where('status', 'changes_requested')->first()->decision_reason }}</p>
+                                                @endif
                                                 @if($asset->currentVersion && $asset->currentVersion->notes)
                                                     <p class="text-xs text-yellow-600 dark:text-yellow-400 mt-1">{{ $asset->currentVersion->notes }}</p>
                                                 @endif
@@ -502,6 +559,12 @@
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Reject Asset</h3>
             <form method="POST" action="{{ route('assets.reject', $asset->id) }}">
                 @csrf
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Rejection Reason (Required)</label>
+                    <textarea name="reason" rows="4" required
+                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                              placeholder="Please provide a reason for rejecting this asset..."></textarea>
+                </div>
                 <div class="flex justify-end space-x-3">
                     <button type="button" onclick="document.getElementById('rejectModal').style.display='none'"
                             class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
@@ -878,4 +941,42 @@ document.addEventListener('keydown', function(e) {
         }
     }
 });
+
+// Start workflow for asset
+function startWorkflow(assetId) {
+    const workflowSelect = document.getElementById('workflow-select');
+    const workflowId = workflowSelect.value;
+    
+    if (!workflowId) {
+        alert('Please select a workflow first');
+        return;
+    }
+
+    if (!confirm('Start this approval workflow for this asset?')) {
+        return;
+    }
+
+    fetch(`/assets/${assetId}/start-workflow`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            workflow_id: workflowId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Error starting workflow: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        alert('Error starting workflow: ' + error.message);
+    });
+}
 </script>

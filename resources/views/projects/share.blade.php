@@ -36,10 +36,19 @@
 
                     <!-- Invite Form -->
                     <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 mb-6">
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                            Invite New Member
-                        </h3>
-                        <form action="{{ route('projects.invite', $project) }}" method="POST">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                Invite New Member
+                            </h3>
+                            <button type="button" 
+                                    onclick="toggleBulkInvite()" 
+                                    class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium">
+                                Bulk Invite
+                            </button>
+                        </div>
+
+                        <!-- Single Invite Form -->
+                        <form action="{{ route('projects.invite', $project) }}" method="POST" id="singleInviteForm">
                             @csrf
                             <div class="flex gap-4">
                                 <div class="flex-1">
@@ -52,7 +61,6 @@
                                 <div>
                                     <select name="role" 
                                             class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white">
-                                        <option value="owner">Owner</option>
                                         <option value="admin">Admin</option>
                                         <option value="reviewer">Reviewer</option>
                                         <option value="viewer">Viewer</option>
@@ -64,7 +72,57 @@
                                 </button>
                             </div>
                         </form>
+
+                        <!-- Bulk Invite Form -->
+                        <form action="{{ route('projects.bulk-invite', $project) }}" method="POST" id="bulkInviteForm" class="hidden mt-4 pt-4 border-t border-gray-200 dark:border-gray-600" enctype="multipart/form-data">
+                            @csrf
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Upload CSV File
+                                </label>
+                                <input type="file" 
+                                       name="csv_file" 
+                                       accept=".csv"
+                                       class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                       required>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    CSV format: email,role (role column is optional). Example: user@example.com,viewer
+                                </p>
+                            </div>
+                            <div class="flex gap-4 items-end">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Default Role (if not in CSV)
+                                    </label>
+                                    <select name="role" 
+                                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white">
+                                        <option value="admin">Admin</option>
+                                        <option value="reviewer">Reviewer</option>
+                                        <option value="viewer" selected>Viewer</option>
+                                    </select>
+                                </div>
+                                <button type="submit" 
+                                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition duration-200">
+                                    Send Bulk Invites
+                                </button>
+                            </div>
+                        </form>
                     </div>
+
+                    <script>
+                        function toggleBulkInvite() {
+                            const bulkForm = document.getElementById('bulkInviteForm');
+                            const singleForm = document.getElementById('singleInviteForm');
+                            
+                            if (bulkForm.classList.contains('hidden')) {
+                                bulkForm.classList.remove('hidden');
+                                singleForm.classList.add('hidden');
+                            } else {
+                                bulkForm.classList.add('hidden');
+                                singleForm.classList.remove('hidden');
+                            }
+                        }
+                    </script>
 
                     <!-- Current Approved Members -->
                     <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 mb-6">

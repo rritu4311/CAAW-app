@@ -20,11 +20,6 @@ header {
   padding: 15px 20px;
 }
 
-/* Dark mode styles */
-.dark header {
-  background: #0f172a;
-}
-
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -118,8 +113,9 @@ header {
 
 /* User Box Styles */
 .user-box {
-  display: inline-block;
-  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -130,17 +126,6 @@ header {
 
 .user-box:hover {
   background: rgba(255, 255, 255, 0.2);
-}
-
-/* Dark mode styles */
-.dark .user-box {
-  background: rgba(0, 0, 0, 0.3);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #e5e7eb;
-}
-
-.dark .user-box:hover {
-  background: rgba(0, 0, 0, 0.5);
 }
 
 /* Mobile */
@@ -216,32 +201,15 @@ header {
 
     </ul>
 
-    <!-- Theme Toggle -->
-    <div class="menu-item">
-      <form method="POST" action="{{ route('theme.toggle') }}" class="inline">
-        @csrf
-        <button type="submit" class="theme-toggle-btn" title="{{ session('theme') === 'dark' ? 'Switch to light mode' : 'Switch to dark mode' }}">
-          @if(session('theme') === 'dark')
-            <!-- Sun icon for light mode (shown when dark) -->
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-            </svg>
-          @else
-            <!-- Moon icon for dark mode (shown when light) -->
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-            </svg>
-          @endif
-        </button>
-      </form>
-    </div>
-
     <!-- Notifications -->
     @include('components.notification-icon')
 
     <!-- Dropdown -->
     <div class="dropdown" id="dropdown">
-      <a href="#" id="dropdownBtn" class="user-box">{{ Auth::user()->name }}</a>
+      <a href="#" id="dropdownBtn" class="user-box">
+        <img src="{{ Auth::user()->gravatar }}" alt="{{ Auth::user()->name }}" class="w-8 h-8 rounded-full object-cover border-2 border-white/30">
+        <span class="ml-2">{{ Auth::user()->name }}</span>
+      </a>
 
       <div class="dropdown-menu">
         <a href="{{ route('profile.edit') }}">Profile</a>

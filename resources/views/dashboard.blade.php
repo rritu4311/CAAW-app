@@ -17,270 +17,224 @@
                 </p>
             </div>
 
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <!-- Total Projects -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <svg class="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                            </svg>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Projects</p>
-                            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $stats['total_projects'] }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Total Assets -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <svg class="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Assets</p>
-                            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $stats['total_assets'] }}</p>
-                        </div>
-                    </div>
-                </div>
-
+            <!-- Quick Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <!-- Pending Approvals -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <svg class="h-8 w-8 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <div class="ml-4">
+                <a href="{{ route('dashboard.pending-approvals') }}" class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer">
+                    <div class="flex items-center justify-between">
+                        <div>
                             <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Pending Approvals</p>
-                            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $stats['pending_approvals'] }}</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-2">{{ $stats['pending_approvals'] }}</p>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Approved Assets -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
-                    <div class="flex items-center">
                         <div class="flex-shrink-0">
-                            <svg class="h-8 w-8 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Approved Assets</p>
-                            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $stats['approved_assets'] }}</p>
+                            <div class="h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
+                                <svg class="h-6 w-6 text-yellow-600 dark:text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
                         </div>
                     </div>
-                </div>
+                </a>
+
+                <!-- Assets in Review -->
+                <a href="{{ route('assets.index') }}?status=in_review" class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Assets in Review</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-2">{{ $stats['assets_in_review'] }}</p>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <div class="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                                <svg class="h-6 w-6 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- New Comments -->
+                <a href="{{ route('dashboard.comments') }}" class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">New Comments</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-2">{{ $stats['new_comments'] }}</p>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <div class="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
+                                <svg class="h-6 w-6 text-purple-600 dark:text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </a>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Recent Projects -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Recent Activity Feed -->
+                <div class="lg:col-span-1 bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Projects</h3>
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Activity</h3>
+                            <select id="project-filter" class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">All Projects</option>
+                                @foreach($projects as $project)
+                                    <option value="{{ $project->id }}">{{ $project->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
-                    <div class="p-6">
-                        @if($recentProjects->count() > 0)
+                    <div class="p-6 max-h-96 overflow-y-auto">
+                        @if($recentActivities->count() > 0)
                             <div class="space-y-4">
-                                @foreach($recentProjects as $project)
-                                    <a href="{{ route('workspace.show', [$project->workspace, $project]) }}" 
-                                       class="block p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                                        <div class="flex items-center justify-between">
-                                            <div>
-                                                <h4 class="font-medium text-gray-900 dark:text-white">{{ $project->name }}</h4>
-                                                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                                    {{ $project->workspace->name ?? 'No Workspace' }}
-                                                </p>
-                                            </div>
-                                            <div class="flex items-center space-x-2">
-                                                @if($project->status)
-                                                    <span class="px-2 py-1 text-xs font-medium rounded-full 
-                                                        {{ $project->status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' }}">
-                                                        {{ ucfirst($project->status) }}
-                                                    </span>
-                                                @endif
-                                                <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                @foreach($recentActivities as $activity)
+                                    @if($activity->subject)
+                                    <div class="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors activity-item" data-project-id="{{ $activity->subject->project_id ?? '' }}">
+                                        <div class="flex-shrink-0">
+                                            @php
+                                                $subject = $activity->subject;
+                                                $subjectType = get_class($subject);
+                                                $bgColor = 'bg-gray-100 dark:bg-gray-900';
+                                                $textColor = 'text-gray-600 dark:text-gray-300';
+                                            @endphp
+
+                                            @if($subjectType === 'App\Models\Workspace')
+                                                @php
+                                                    $bgColor = 'bg-blue-100 dark:bg-blue-900';
+                                                    $textColor = 'text-blue-600 dark:text-blue-300';
+                                                @endphp
+                                            @elseif($subjectType === 'App\Models\Project')
+                                                @php
+                                                    $bgColor = 'bg-green-100 dark:bg-green-900';
+                                                    $textColor = 'text-green-600 dark:text-green-300';
+                                                @endphp
+                                            @elseif($subjectType === 'App\Models\Folder')
+                                                @php
+                                                    $bgColor = 'bg-yellow-100 dark:bg-yellow-900';
+                                                    $textColor = 'text-yellow-600 dark:text-yellow-300';
+                                                @endphp
+                                            @elseif($subjectType === 'App\Models\Asset')
+                                                @php
+                                                    $bgColor = 'bg-purple-100 dark:bg-purple-900';
+                                                    $textColor = 'text-purple-600 dark:text-purple-300';
+                                                @endphp
+                                            @endif
+
+                                            <div class="h-8 w-8 rounded-full {{ $bgColor }} flex items-center justify-center">
+                                                <svg class="h-4 w-4 {{ $textColor }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                 </svg>
                                             </div>
                                         </div>
-                                    </a>
-                                @endforeach
-                            </div>
-                        @else
-                            <p class="text-gray-500 dark:text-gray-400 text-center py-8">
-                                No projects yet. <a href="{{ route('workspaces.index') }}" class="text-blue-500 hover:underline">Create your first project</a>
-                            </p>
-                        @endif
-                    </div>
-                </div>
-
-                <!-- Pending Approvals -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Pending Approvals</h3>
-                    </div>
-                    <div class="p-6">
-                        @if($pendingApprovals->count() > 0)
-                            <div class="space-y-4">
-                                @foreach($pendingApprovals as $asset)
-                                    <a href="{{ route('assets.show', $asset) }}" 
-                                       class="block p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                                        <div class="flex items-start space-x-4">
-                                            <div class="flex-shrink-0">
-                                                @if($asset->isImage())
-                                                    <div class="h-12 w-12 rounded-lg bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
-                                                        <svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                        </svg>
-                                                    </div>
-                                                @elseif($asset->isVideo())
-                                                    <div class="h-12 w-12 rounded-lg bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
-                                                        <svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                                        </svg>
-                                                    </div>
-                                                @else
-                                                    <div class="h-12 w-12 rounded-lg bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
-                                                        <svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                        </svg>
-                                                    </div>
-                                                @endif
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <h4 class="font-medium text-gray-900 dark:text-white truncate">{{ $asset->name }}</h4>
-                                                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                                    {{ $asset->project->name ?? 'No Project' }}
-                                                </p>
-                                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                                    Uploaded by {{ $asset->uploadedBy->name ?? 'Unknown' }}
-                                                </p>
-                                            </div>
-                                            <div class="flex-shrink-0">
-                                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                                                    In Review
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </a>
-                                @endforeach
-                            </div>
-                        @else
-                            <p class="text-gray-500 dark:text-gray-400 text-center py-8">
-                                No pending approvals. All caught up!
-                            </p>
-                        @endif
-                    </div>
-                </div>
-
-                <!-- Recent Activity -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg lg:col-span-2">
-                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Activity</h3>
-                    </div>
-                    <div class="p-6">
-                        @if($recentAssets->count() > 0)
-                            <div class="space-y-4">
-                                @foreach($recentAssets as $asset)
-                                    <div class="flex items-start space-x-4 p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                                        <div class="flex-shrink-0">
-                                            @if($asset->isImage())
-                                                <div class="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                                    <svg class="h-5 w-5 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                    </svg>
-                                                </div>
-                                            @elseif($asset->isVideo())
-                                                <div class="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
-                                                    <svg class="h-5 w-5 text-purple-600 dark:text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                                    </svg>
-                                                </div>
-                                            @else
-                                                <div class="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                                                    <svg class="h-5 w-5 text-green-600 dark:text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                    </svg>
-                                                </div>
-                                            @endif
-                                        </div>
                                         <div class="flex-1 min-w-0">
-                                            <p class="text-sm text-gray-900 dark:text-white">
-                                                <span class="font-medium">{{ $asset->uploadedBy->name ?? 'Unknown' }}</span>
-                                                uploaded <span class="font-medium">{{ $asset->name }}</span>
-                                            </p>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                                to {{ $asset->project->name ?? 'No Project' }}
+                                            <p class="text-sm text-gray-900 dark:text-white line-clamp-2">
+                                                {{ $activity->description }}
                                             </p>
                                             <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                                {{ $asset->created_at->diffForHumans() }}
+                                                {{ $activity->created_at->diffForHumans() }}
                                             </p>
                                         </div>
-                                        <div class="flex-shrink-0">
+                                    </div>
+                                    @endif
+                                @endforeach
+                            </div>
+                        @else
+                            <p class="text-gray-500 dark:text-gray-400 text-center py-8">
+                                No recent activity yet.
+                            </p>
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Project Cards Grid -->
+                <div class="lg:col-span-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        @foreach($projects as $project)
+                            <a href="{{ route('workspace.show', [$project->workspace, $project]) }}" 
+                               class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg hover:shadow-md transition-shadow cursor-pointer">
+                                <!-- Thumbnail -->
+                                <div class="h-40 bg-gray-100 dark:bg-gray-700 relative">
+                                    @if($project->assets->count() > 0 && $project->assets->first()->isImage())
+                                        <img src="{{ asset('storage/' . $project->assets->first()->file_path) }}" 
+                                             alt="{{ $project->name }}" 
+                                             class="w-full h-full object-cover">
+                                    @else
+                                        <div class="w-full h-full flex items-center justify-center">
+                                            <svg class="h-16 w-16 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                        </div>
+                                    @endif
+
+                                    <!-- Pending Approvals Badge -->
+                                    @if($project->pending_approvals_count > 0)
+                                        <div class="absolute top-3 right-3 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                                            {{ $project->pending_approvals_count }} pending
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <!-- Project Info -->
+                                <div class="p-4">
+                                    <h4 class="font-semibold text-gray-900 dark:text-white text-lg mb-1">{{ $project->name }}</h4>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">{{ $project->client_name ?? 'No client' }}</p>
+
+                                    <div class="flex items-center justify-between text-sm">
+                                        <div class="flex items-center space-x-4">
+                                            @if($project->deadline)
+                                                <span class="text-gray-500 dark:text-gray-400">
+                                                    <svg class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                    {{ $project->deadline->format('M d') }}
+                                                </span>
+                                            @endif
                                             <span class="px-2 py-1 text-xs font-medium rounded-full 
-                                                {{ $asset->status === 'approved' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 
-                                                   ($asset->status === 'in_review' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' : 
-                                                   ($asset->status === 'rejected' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300')) }}">
-                                                {{ ucfirst(str_replace('_', ' ', $asset->status)) }}
+                                                {{ $project->status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' }}">
+                                                {{ ucfirst($project->status) }}
                                             </span>
                                         </div>
                                     </div>
-                                @endforeach
-                            </div>
-                        @else
-                            <p class="text-gray-500 dark:text-gray-400 text-center py-8">
-                                No recent activity. Start by uploading some assets!
-                            </p>
-                        @endif
+                                </div>
+                            </a>
+                        @endforeach
                     </div>
-                </div>
-            </div>
 
-            <!-- Quick Actions -->
-            <div class="mt-8 bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Quick Actions</h3>
-                </div>
-                <div class="p-6">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <a href="{{ route('workspaces.index') }}" 
-                           class="flex items-center justify-center p-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                            <div class="text-center">
-                                <svg class="h-8 w-8 mx-auto text-gray-400 dark:text-gray-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
-                                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Create New Project</p>
-                            </div>
-                        </a>
-                        <a href="{{ route('workspaces.index') }}" 
-                           class="flex items-center justify-center p-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-500 dark:hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
-                            <div class="text-center">
-                                <svg class="h-8 w-8 mx-auto text-gray-400 dark:text-gray-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                </svg>
-                                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Upload Assets</p>
-                            </div>
-                        </a>
-                        <a href="{{ route('notifications.index') }}" 
-                           class="flex items-center justify-center p-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-purple-500 dark:hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors">
-                            <div class="text-center">
-                                <svg class="h-8 w-8 mx-auto text-gray-400 dark:text-gray-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                </svg>
-                                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">View Notifications</p>
-                            </div>
-                        </a>
-                    </div>
+                    @if($projects->count() === 0)
+                        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-12 text-center">
+                            <svg class="h-16 w-16 mx-auto text-gray-400 dark:text-gray-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                            </svg>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No projects yet</h3>
+                            <p class="text-gray-500 dark:text-gray-400 mb-4">Get started by creating your first project.</p>
+                            <a href="{{ route('workspaces.index') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                                Create Project
+                            </a>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const projectFilter = document.getElementById('project-filter');
+            const activityItems = document.querySelectorAll('.activity-item');
+
+            projectFilter.addEventListener('change', function() {
+                const selectedProjectId = this.value;
+
+                activityItems.forEach(item => {
+                    const itemProjectId = item.getAttribute('data-project-id');
+                    if (selectedProjectId === '' || itemProjectId === selectedProjectId) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
 </x-app-layout>

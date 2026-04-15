@@ -22,8 +22,12 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'username',
         'password',
         'theme',
+        'email_notification_preference',
+        'in_app_notifications',
+        'avatar',
     ];
 
     /**
@@ -331,5 +335,31 @@ class User extends Authenticatable
     public function canManageProject(Project $project): bool
     {
         return $this->isProjectOwner($project) || $this->hasWorkspaceRole($project->workspace, ['user']);
+    }
+
+    /**
+     * Get the user's avatar URL (custom avatar or Gravatar).
+     */
+    public function getGravatarAttribute(): string
+    {
+        if ($this->avatar) {
+            return asset('storage/' . $this->avatar);
+        }
+
+        $email = md5(strtolower(trim($this->email)));
+        return "https://www.gravatar.com/avatar/{$email}?s=200&d=identicon";
+    }
+
+    /**
+     * Get the user's recent activities.
+     */
+    public function recentActivities(int $limit = 10)
+    {
+        return \Spatie\Activitylog\Models\Activity::where('causer_id', $this->id)
+            ->where('causer_type', get_class($this))
+            ->with('subject')
+            ->latest()
+            ->limit($limit)
+            ->get();
     }
 }

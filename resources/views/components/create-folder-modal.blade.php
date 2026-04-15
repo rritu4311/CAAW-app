@@ -1,4 +1,4 @@
-@props(['projectId', 'parentFolderId' => null])
+@props(['projectId', 'parentFolderId' => null, 'error' => null])
 
 <!-- Modal -->
 <div id="createFolderModal{{ $parentFolderId ?: 'root' }}" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
@@ -13,21 +13,28 @@
                     </svg>
                 </button>
             </div>
-            
+
             <form action="{{ route('folders.store') }}" method="POST">
                 @csrf
                 <input type="hidden" name="project_id" value="{{ $projectId }}">
                 @if($parentFolderId)
                     <input type="hidden" name="parent_folder_id" value="{{ $parentFolderId }}">
                 @endif
-                
+
+                @if($error)
+                    <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                        <p>{{ $error }}</p>
+                    </div>
+                @endif
+
                 <div class="mb-4">
                     <label for="folderName{{ $parentFolderId ?: 'root' }}" class="block text-sm font-medium text-gray-700 mb-2">
                         Folder Name
                     </label>
-                    <input type="text" 
-                           id="folderName{{ $parentFolderId ?: 'root' }}" 
-                           name="name" 
+                    <input type="text"
+                           id="folderName{{ $parentFolderId ?: 'root' }}"
+                           name="name"
+                           value="{{ old('name') }}"
                            required
                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                            placeholder="Enter folder name">
@@ -68,5 +75,12 @@ document.addEventListener('click', function(event) {
     if (event.target.classList.contains('bg-opacity-50')) {
         event.target.classList.add('hidden');
     }
+});
+
+// Auto-open modal if there are errors
+document.addEventListener('DOMContentLoaded', function() {
+    @if($error)
+        openModal('createFolderModal{{ $parentFolderId ?: 'root' }}');
+    @endif
 });
 </script>

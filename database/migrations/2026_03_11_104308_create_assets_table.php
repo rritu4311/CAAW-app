@@ -23,8 +23,9 @@ return new class extends Migration
                 'draft',
                 'in_review',
                 'approved',
+                'pending_approval',
                 'rejected',
-                'changes_requested'
+                'changes_requested',
             ])->default('draft');
             $table->unsignedBigInteger('uploaded_by');
             $table->float('version')->default(1.0);

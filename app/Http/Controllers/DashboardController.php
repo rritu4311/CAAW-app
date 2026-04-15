@@ -18,126 +18,124 @@ class DashboardController extends Controller
     public function index()
     {
         $user = Auth::user();
-        
-        // Get statistics for the dashboard
+
+        // Get quick stats
         $stats = [
-            'total_projects' => $this->getUserProjectsCount($user),
-            'total_assets' => $this->getUserAssetsCount($user),
             'pending_approvals' => $this->getPendingApprovalsCount($user),
-            'approved_assets' => $this->getApprovedAssetsCount($user),
+            'assets_in_review' => $this->getAssetsInReviewCount($user),
+            'new_comments' => $this->getNewComments($user)->count(),
         ];
-        
-        // Get recent projects the user has access to
-        $recentProjects = $this->getRecentProjects($user);
-        
-        // Get assets pending approval that the user can action
-        $pendingApprovals = $this->getPendingApprovals($user);
-        
-        // Get recent activity (recently uploaded assets)
-        $recentAssets = $this->getRecentAssets($user);
-        
+
+        // Get recent activity from activity log
+        $recentActivities = $user->recentActivities(10);
+
+        // Get projects with latest asset thumbnails
+        $projects = $this->getProjectsWithLatestAsset($user);
+
+        // Get new comments with annotations
+        $newComments = $this->getNewComments($user);
+
         return view('dashboard', compact(
             'stats',
-            'recentProjects',
-            'pendingApprovals',
-            'recentAssets'
+            'recentActivities',
+            'projects',
+            'newComments'
         ));
     }
-    
+
     /**
-     * Get the count of projects the user has access to.
-     */
-    private function getUserProjectsCount($user): int
-    {
-        // Count projects where user is owner
-        $ownedProjects = Project::where('created_by', $user->id)->count();
-        
-        // Count projects where user is a direct collaborator
-        $collaboratedProjects = $user->projects()
-            ->where('project_collaborators.status', 'approved')
-            ->count();
-        
-        return $ownedProjects + $collaboratedProjects;
-    }
-    
-    /**
-     * Get the count of assets the user has access to.
-     */
-    private function getUserAssetsCount($user): int
-    {
-        // Get all projects the user can view
-        $projectIds = $this->getViewableProjectIds($user);
-        
-        return Asset::whereIn('project_id', $projectIds)->count();
-    }
-    
-    /**
-     * Get the count of pending approvals the user can action.
+     * Get count of pending approvals (workspace + project requests).
      */
     private function getPendingApprovalsCount($user): int
     {
+        // Count pending workspace requests
+        $pendingWorkspaceCount = \App\Models\WorkspaceUser::whereIn('workspace_id', function($query) use ($user) {
+            $query->select('id')
+                ->from('workspaces')
+                ->where('owner_id', $user->id)
+                ->orWhereIn('id', function($q) use ($user) {
+                    $q->select('workspace_id')
+                        ->from('workspace_users')
+                        ->where('user_id', $user->id)
+                        ->where('status', 'approved')
+                        ->whereIn('role', ['owner', 'admin']);
+                });
+        })
+        ->where('status', 'pending')
+        ->count();
+
+        // Count pending project collaborator requests
+        $pendingProjectCount = \App\Models\ProjectCollaborator::whereIn('project_id', function($query) use ($user) {
+            $query->select('id')
+                ->from('projects')
+                ->where('created_by', $user->id)
+                ->orWhereIn('workspace_id', function($q) use ($user) {
+                    $q->select('workspace_id')
+                        ->from('workspace_users')
+                        ->where('user_id', $user->id)
+                        ->where('status', 'approved')
+                        ->whereIn('role', ['owner', 'admin']);
+                });
+        })
+        ->where('status', 'pending')
+        ->count();
+
+        return $pendingWorkspaceCount + $pendingProjectCount;
+    }
+
+    /**
+     * Get count of assets in review.
+     */
+    private function getAssetsInReviewCount($user): int
+    {
         $projectIds = $this->getViewableProjectIds($user);
-        
         return Asset::whereIn('project_id', $projectIds)
             ->where('status', 'in_review')
+            ->where('uploaded_by', $user->id)
             ->count();
     }
-    
+
     /**
-     * Get the count of approved assets.
+     * Get new comments with annotations.
      */
-    private function getApprovedAssetsCount($user): int
+    private function getNewComments($user)
     {
         $projectIds = $this->getViewableProjectIds($user);
         
-        return Asset::whereIn('project_id', $projectIds)
-            ->where('status', 'approved')
-            ->count();
+        return \App\Models\Comment::whereIn('asset_id', function($query) use ($projectIds) {
+            $query->select('id')->from('assets')->whereIn('project_id', $projectIds);
+        })
+        ->where(function($query) use ($user) {
+            // Comments on assets owned by the user
+            $query->whereHas('asset', function($q) use ($user) {
+                $q->where('uploaded_by', $user->id);
+            })
+            // Or comments where the user is mentioned
+            ->orWhereJsonContains('mentioned_users', $user->id);
+        })
+        ->where('user_id', '!=', $user->id) // Exclude comments made by the user themselves
+        ->with(['user', 'asset.project.workspace', 'annotation'])
+        ->orderBy('created_at', 'desc')
+        ->limit(20)
+        ->get();
     }
-    
+
     /**
-     * Get recent projects the user has access to.
+     * Get projects with their latest asset thumbnail.
      */
-    private function getRecentProjects($user)
+    private function getProjectsWithLatestAsset($user)
     {
         $projectIds = $this->getViewableProjectIds($user);
-        
+
         return Project::whereIn('id', $projectIds)
-            ->with('workspace')
+            ->with(['workspace', 'assets' => function($query) {
+                $query->latest()->limit(1);
+            }])
+            ->where('created_by', $user->id)
             ->orderBy('created_at', 'desc')
-            ->limit(5)
             ->get();
     }
-    
-    /**
-     * Get assets pending approval that the user can action.
-     */
-    private function getPendingApprovals($user)
-    {
-        $projectIds = $this->getViewableProjectIds($user);
-        
-        return Asset::whereIn('project_id', $projectIds)
-            ->where('status', 'in_review')
-            ->with('project', 'uploadedBy')
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get();
-    }
-    
-    /**
-     * Get recent assets uploaded by or accessible to the user.
-     */
-    private function getRecentAssets($user)
-    {
-        $projectIds = $this->getViewableProjectIds($user);
-        
-        return Asset::whereIn('project_id', $projectIds)
-            ->with('project', 'uploadedBy')
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
-    }
-    
+
     /**
      * Get all project IDs the user can view.
      */
@@ -145,13 +143,69 @@ class DashboardController extends Controller
     {
         // Projects owned by user
         $ownedProjectIds = Project::where('created_by', $user->id)->pluck('id')->toArray();
-        
+
         // Projects where user is a direct collaborator
         $collaboratedProjectIds = $user->projects()
             ->where('project_collaborators.status', 'approved')
             ->pluck('projects.id')
             ->toArray();
-        
+
         return array_unique(array_merge($ownedProjectIds, $collaboratedProjectIds));
+    }
+
+    /**
+     * Show pending approvals for workspaces and projects.
+     */
+    public function pendingApprovals()
+    {
+        $user = Auth::user();
+
+        // Get pending workspace requests (where user is owner/admin)
+        $pendingWorkspaceUsers = \App\Models\WorkspaceUser::whereIn('workspace_id', function($query) use ($user) {
+            $query->select('id')
+                ->from('workspaces')
+                ->where('owner_id', $user->id)
+                ->orWhereIn('id', function($q) use ($user) {
+                    $q->select('workspace_id')
+                        ->from('workspace_users')
+                        ->where('user_id', $user->id)
+                        ->where('status', 'approved')
+                        ->whereIn('role', ['owner', 'admin']);
+                });
+        })
+        ->where('status', 'pending')
+        ->with(['workspace', 'user'])
+        ->get();
+
+        // Get pending project collaborator requests (where user is owner/admin)
+        $pendingProjectCollaborators = \App\Models\ProjectCollaborator::whereIn('project_id', function($query) use ($user) {
+            $query->select('id')
+                ->from('projects')
+                ->where('created_by', $user->id)
+                ->orWhereIn('workspace_id', function($q) use ($user) {
+                    $q->select('workspace_id')
+                        ->from('workspace_users')
+                        ->where('user_id', $user->id)
+                        ->where('status', 'approved')
+                        ->whereIn('role', ['owner', 'admin']);
+                });
+        })
+        ->where('status', 'pending')
+        ->with(['project', 'user'])
+        ->get();
+
+        return view('pending-approvals', compact('pendingWorkspaceUsers', 'pendingProjectCollaborators'));
+    }
+
+    /**
+     * Show new comments for workspaces and projects.
+     */
+    public function comments()
+    {
+        $user = Auth::user();
+
+        $newComments = $this->getNewComments($user);
+
+        return view('dashboard-comments', compact('newComments'));
     }
 }

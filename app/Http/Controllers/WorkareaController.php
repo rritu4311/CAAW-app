@@ -73,7 +73,17 @@ class WorkareaController extends Controller
             abort(403);
         }
 
-        return view('project.show', compact('workspace', 'project'));
+        // Admin has read-only access (cannot edit projects)
+        $readOnly = $workspace->userHasRole($user, ['admin']) && !$workspace->isOwnedBy($user);
+
+        // Load root folders (folders without parent) for the project
+        $folders = \App\Models\Folder::where('project_id', $project->id)
+            ->whereNull('parent_folder_id')
+            ->with('children')
+            ->orderBy('order')
+            ->get();
+
+        return view('project.show', compact('workspace', 'project', 'readOnly', 'folders'));
     }
 
     

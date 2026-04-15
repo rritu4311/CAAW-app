@@ -7,6 +7,7 @@ use App\Models\WorkspaceUser;
 use App\Models\ProjectCollaborator;
 use App\Notifications\AccessShare;
 use App\Notifications\WorkspaceRequestApproved;
+use App\Notifications\WorkspaceInvitationResponseNotification;
 use App\Notifications\ProjectRequestApproved;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -68,7 +69,7 @@ class NotificationController extends Controller
     /**
      * Mark a specific notification as read.
      */
-    public function markAsRead(Request $request, $id): JsonResponse
+    public function markAsRead(Request $request, $id)
     {
         $notification = $request->user()
             ->notifications()
@@ -76,7 +77,11 @@ class NotificationController extends Controller
 
         $notification->markAsRead();
 
-        return response()->json(['message' => 'Notification marked as read']);
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Notification marked as read']);
+        }
+
+        return back()->with('success', 'Notification marked as read');
     }
 
     /**
@@ -97,11 +102,15 @@ class NotificationController extends Controller
     /**
      * Mark all notifications as read for the authenticated user.
      */
-    public function markAllAsRead(Request $request): JsonResponse
+    public function markAllAsRead(Request $request)
     {
         $request->user()->unreadNotifications->markAsRead();
 
-        return response()->json(['message' => 'All notifications marked as read']);
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'All notifications marked as read']);
+        }
+
+        return back()->with('success', 'All notifications marked as read');
     }
 
     /**
@@ -157,6 +166,15 @@ class NotificationController extends Controller
         
         $notification->markAsRead();
 
+        // Send notification to the workspace owner about the acceptance
+        \Log::info('Sending workspace acceptance notification to owner: ' . $workspace->owner->id);
+        try {
+            $workspace->owner->notify(new WorkspaceInvitationResponseNotification($workspace, $request->user(), 'accepted', $workspace->owner));
+            \Log::info('Workspace acceptance notification sent successfully');
+        } catch (\Exception $e) {
+            \Log::error('Failed to send workspace acceptance notification: ' . $e->getMessage());
+        }
+
         return redirect()->route('workspaces.share-index')
             ->with('success', '✅ Workspace invitation approved successfully! You now have access to the workspace.');
     }
@@ -197,6 +215,15 @@ class NotificationController extends Controller
         $notification->approve_at = null; // Clear any approval
         $notification->sent_at = now(); // Set rejection timestamp
         $notification->markAsRead();
+
+        // Send notification to the workspace owner about the rejection
+        \Log::info('Sending workspace rejection notification to owner: ' . $workspace->owner->id);
+        try {
+            $workspace->owner->notify(new WorkspaceInvitationResponseNotification($workspace, $request->user(), 'rejected', $workspace->owner));
+            \Log::info('Workspace rejection notification sent successfully');
+        } catch (\Exception $e) {
+            \Log::error('Failed to send workspace rejection notification: ' . $e->getMessage());
+        }
 
         return back()->with('success', '❌ Workspace invitation rejected. The invitation has been removed.');
     }

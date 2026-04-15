@@ -13,7 +13,7 @@
                     <!-- Back Button -->
                     <div class="mb-4">
                         @if($folder->parent)
-                            <a href="{{ route('folders.show', $folder->parent->id) }}" 
+                            <a href="{{ route('folders.show', $folder->parent->id) }}"
                                class="inline-flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -21,7 +21,7 @@
                                 Back to {{ $folder->parent->name }}
                             </a>
                         @else
-                            <a href="{{ route('projects.show', $folder->project->id) }}" 
+                            <a href="{{ route('projects.show', $folder->project->id) }}"
                                class="inline-flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -30,6 +30,22 @@
                             </a>
                         @endif
                     </div>
+
+                    @if(session('error'))
+                        <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+
+                    @if($errors->any())
+                        <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                            <ul>
+                                @foreach($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
 
                     <!-- Breadcrumb Navigation -->
                     <nav class="flex items-center space-x-2 text-sm mb-6">
@@ -300,39 +316,16 @@
                                                 class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded transition-colors">Download</a>
                                             
                                             @if(!$readOnly)
-                                                <!-- Move Asset Dropdown -->
-                                                <div class="relative inline-block" id="moveDropdown{{ $asset->id }}">
-                                                    <button type="button" 
-                                                        onclick="toggleMoveDropdown({{ $asset->id }}, {{ $folder->project->id }}, {{ $folder->id ?: 'null' }})"
-                                                        class="px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs font-medium rounded transition-colors flex items-center"
-                                                        title="Move File">
-                                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                                                        </svg>
-                                                        Move
-                                                        <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                        </svg>
-                                                    </button>
-                                                    <!-- Dropdown Menu -->
-                                                    <div id="moveMenu{{ $asset->id }}" class="hidden absolute right-0 mt-1 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-50">
-                                                        <div class="py-1 max-h-64 overflow-y-auto">
-                                                            <p class="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                                                                Move "{{ Str::limit($asset->name, 20) }}" to:
-                                                            </p>
-                                                            
-                                                            <!-- Folders will be loaded dynamically -->
-                                                            <div id="moveFolders{{ $asset->id }}" class="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
-                                                                <div class="px-3 py-2 text-center text-xs text-gray-400">
-                                                                    <svg class="animate-spin h-4 w-4 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                                    </svg>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                                <!-- Move Asset Button -->
+                                                <button type="button" 
+                                                    onclick="openMoveAssetModal({{ $asset->id }}, '{{ $asset->name }}', {{ $folder->project->id }}, {{ $folder->id ?: 'null' }})"
+                                                    class="px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs font-medium rounded transition-colors flex items-center"
+                                                    title="Move File">
+                                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                                    </svg>
+                                                    Move
+                                                </button>
 
                                                 <form action="{{ route('folders.file.delete') }}" method="POST" class="inline">
                                                     @csrf
@@ -358,7 +351,7 @@
 
     @if(!$readOnly)
     <!-- Create Subfolder Modal -->
-    <x-create-folder-modal :projectId="$folder->project->id" :parentFolderId="$folder->id" />
+    <x-create-folder-modal :projectId="$folder->project->id" :parentFolderId="$folder->id" :error="session('error')" />
     
     <!-- Edit Folder Modal -->
     <x-edit-folder-modal />
@@ -461,7 +454,96 @@
         </div>
     </div>
 
+    <!-- Move Asset Modal -->
+    <div id="moveAssetModal" class="fixed inset-0 z-50 hidden" aria-labelledby="move-asset-modal-title" role="dialog" aria-modal="true">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity duration-300" onclick="closeMoveAssetModal()"></div>
+
+        <!-- Modal Panel -->
+        <div class="fixed inset-0 z-10 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4 text-center">
+                <div class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-2xl transition-all w-full max-w-xs">
+                    <!-- Header -->
+                    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-3 flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <div class="bg-white/20 p-1.5 rounded-lg">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-base font-semibold text-white" id="move-asset-modal-title">Move File</h3>
+                        </div>
+                        <button onclick="closeMoveAssetModal()" class="text-white/80 hover:text-white focus:outline-none transition-colors rounded-lg p-1 hover:bg-white/10">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="p-4">
+                        <div class="mb-3 p-2 bg-indigo-50 rounded-lg border border-indigo-100">
+                            <p class="text-xs text-gray-600">
+                                Moving: <span id="moveAssetFileName" class="font-semibold text-indigo-700"></span>
+                            </p>
+                        </div>
+                        
+                        <!-- Search Input -->
+                        <div class="mb-3">
+                            <div class="relative">
+                                <svg class="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <input type="text" id="folderSearchInput" placeholder="Search folders..." 
+                                    class="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-xs"
+                                    oninput="filterFolders(this.value)">
+                            </div>
+                        </div>
+                        
+                        <!-- Folders List -->
+                        <div id="moveAssetFolders" class="border border-gray-200 rounded-lg max-h-60 overflow-y-auto bg-gray-50 custom-scrollbar">
+                            <div class="px-4 py-8 text-center text-xs text-gray-400">
+                                <svg class="animate-spin h-5 w-5 mx-auto mb-2 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <p class="font-medium">Loading folders...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="bg-gray-50 px-4 py-3 flex justify-end gap-2 border-t border-gray-200">
+                        <button onclick="closeMoveAssetModal()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium text-xs focus:ring-2 focus:ring-gray-200 focus:outline-none">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </x-app-layout>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #c7c7c7;
+        border-radius: 3px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+</style>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
@@ -1068,51 +1150,47 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Move Asset Dropdown Functions
-let activeDropdown = null;
+// Move Asset Modal Functions
 let folderCache = {};
+let currentMoveAssetId = null;
+let allFoldersData = null;
+let currentFolderIdForModal = null;
 
-function toggleMoveDropdown(assetId, projectId, currentFolderId) {
-    const dropdown = document.getElementById(`moveMenu${assetId}`);
-    const foldersContainer = document.getElementById(`moveFolders${assetId}`);
+function openMoveAssetModal(assetId, assetName, projectId, currentFolderId) {
+    currentMoveAssetId = assetId;
+    currentFolderIdForModal = currentFolderId;
+    const modal = document.getElementById('moveAssetModal');
+    const fileNameEl = document.getElementById('moveAssetFileName');
+    const foldersContainer = document.getElementById('moveAssetFolders');
+    const searchInput = document.getElementById('folderSearchInput');
     
-    // Close other open dropdowns
-    if (activeDropdown && activeDropdown !== dropdown) {
-        activeDropdown.classList.add('hidden');
-    }
+    fileNameEl.textContent = assetName;
+    searchInput.value = '';
     
-    // Toggle current dropdown
-    if (dropdown.classList.contains('hidden')) {
-        dropdown.classList.remove('hidden');
-        activeDropdown = dropdown;
-        
-        // Load folders if not cached
-        if (!folderCache[projectId]) {
-            loadFoldersForDropdown(projectId, currentFolderId, foldersContainer, assetId);
-        } else {
-            renderFoldersForDropdown(folderCache[projectId], currentFolderId, foldersContainer, assetId);
-        }
-        
-        // Close dropdown when clicking outside
-        setTimeout(() => {
-            document.addEventListener('click', closeDropdownOnClickOutside);
-        }, 0);
+    // Show modal
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    
+    // Load folders
+    if (!folderCache[projectId]) {
+        loadFoldersForModal(projectId, currentFolderId, foldersContainer);
     } else {
-        dropdown.classList.add('hidden');
-        activeDropdown = null;
+        allFoldersData = folderCache[projectId];
+        renderFoldersForModal(allFoldersData, currentFolderId, foldersContainer);
     }
 }
 
-function closeDropdownOnClickOutside(e) {
-    if (activeDropdown && !activeDropdown.contains(e.target) && !e.target.closest('[id^="moveDropdown"]')) {
-        activeDropdown.classList.add('hidden');
-        activeDropdown = null;
-        document.removeEventListener('click', closeDropdownOnClickOutside);
-    }
+function closeMoveAssetModal() {
+    const modal = document.getElementById('moveAssetModal');
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+    currentMoveAssetId = null;
+    currentFolderIdForModal = null;
+    allFoldersData = null;
 }
 
-async function loadFoldersForDropdown(projectId, currentFolderId, container, assetId) {
-    container.innerHTML = '<div class="px-3 py-2 text-center text-xs text-gray-400"><svg class="animate-spin h-4 w-4 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>';
+async function loadFoldersForModal(projectId, currentFolderId, container) {
+    container.innerHTML = '<div class="px-4 py-8 text-center text-xs text-gray-400"><svg class="animate-spin h-5 w-5 mx-auto mb-2 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><p class="font-medium">Loading folders...</p></div>';
     
     try {
         const response = await fetch(`/projects/${projectId}/folder-tree`);
@@ -1120,75 +1198,116 @@ async function loadFoldersForDropdown(projectId, currentFolderId, container, ass
         
         const folders = await response.json();
         folderCache[projectId] = folders;
+        allFoldersData = folders;
         
-        renderFoldersForDropdown(folders, currentFolderId, container, assetId);
+        renderFoldersForModal(folders, currentFolderId, container);
     } catch (error) {
-        container.innerHTML = '<div class="px-3 py-2 text-xs text-red-500">Error loading folders</div>';
+        container.innerHTML = '<div class="px-4 py-8 text-xs text-red-500 text-center"><svg class="w-8 h-8 mx-auto mb-2 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><p class="font-medium">Error loading folders</p></div>';
         console.error('Error loading folders:', error);
     }
 }
 
-function renderFoldersForDropdown(folders, currentFolderId, container, assetId, parentPath = '') {
+function renderFoldersForModal(folders, currentFolderId, container, parentPath = '') {
     if (!folders || folders.length === 0) {
-        container.innerHTML = '<div class="px-3 py-2 text-xs text-gray-400 italic">No folders available</div>';
+        container.innerHTML = '<div class="px-4 py-8 text-xs text-gray-400 text-center"><svg class="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg><p class="font-medium">No folders available</p></div>';
         return;
     }
     
     let html = '';
+    
     folders.forEach(folder => {
         const fullPath = parentPath ? `${parentPath} / ${folder.name}` : folder.name;
-        html += renderFolderItem(folder, currentFolderId, 0, assetId, fullPath);
+        html += renderFolderItemForModal(folder, currentFolderId, 0, fullPath);
     });
     
     container.innerHTML = html;
 }
 
-function renderFolderItem(folder, currentFolderId, level, assetId, fullPath = '') {
+function renderFolderItemForModal(folder, currentFolderId, level, fullPath = '') {
     const isCurrent = folder.id === currentFolderId;
     const indent = level * 12;
-    const disabledClass = isCurrent ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300';
+    const disabledClass = isCurrent ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer group';
     const folderName = folder.name.replace(/'/g, "\\'");
     const pathDisplay = fullPath.replace(/'/g, "\\'");
     
     let html = `
         <button type="button"
-            onclick="${isCurrent ? '' : `quickMoveAsset(${assetId}, ${folder.id}, '${folderName}', '${pathDisplay}')`}"
-            class="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 transition-colors flex flex-col ${disabledClass}"
+            onclick="${isCurrent ? '' : `moveAssetToFolder(${folder.id}, '${folderName}', '${pathDisplay}')`}"
+            class="w-full text-left px-3 py-2 text-xs text-gray-700 transition-all flex items-center border-b border-gray-200 last:border-b-0 ${disabledClass}"
             style="padding-left: ${16 + indent}px"
             ${isCurrent ? 'disabled' : ''}
             title="Directory: ${pathDisplay}">
-            <div class="flex items-center w-full">
-                <svg class="w-4 h-4 mr-2 text-yellow-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
-                </svg>
-                <span class="truncate font-medium">${folder.name} ${isCurrent ? '(current)' : ''}</span>
+            <svg class="w-4 h-4 mr-2 text-amber-500 flex-shrink-0 ${isCurrent ? '' : 'group-hover:text-amber-600'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+            </svg>
+            <div class="flex flex-col flex-1 min-w-0">
+                <span class="font-medium truncate">${folder.name} ${isCurrent ? '<span class="text-xs text-gray-400 ml-1">(current)</span>' : ''}</span>
+                ${!isCurrent ? `<span class="text-xs text-gray-400 truncate group-hover:text-indigo-400">${fullPath}</span>` : ''}
             </div>
-            ${!isCurrent ? `<div class="text-xs text-gray-400 ml-6 truncate" style="max-width: 180px;">${fullPath}</div>` : ''}
+            ${!isCurrent ? `
+                <svg class="w-3.5 h-3.5 text-gray-300 group-hover:text-indigo-500 ml-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            ` : ''}
         </button>
     `;
     
     if (folder.children && folder.children.length > 0) {
         folder.children.forEach(child => {
             const childPath = fullPath ? `${fullPath} / ${child.name}` : child.name;
-            html += renderFolderItem(child, currentFolderId, level + 1, assetId, childPath);
+            html += renderFolderItemForModal(child, currentFolderId, level + 1, childPath);
         });
     }
     
     return html;
 }
 
-async function quickMoveAsset(assetId, targetFolderId, folderName, directoryPath = '') {
-    const dropdown = document.getElementById(`moveMenu${assetId}`);
-    if (dropdown) {
-        dropdown.classList.add('hidden');
-    }
-    activeDropdown = null;
+function filterFolders(searchTerm) {
+    if (!allFoldersData) return;
     
+    const container = document.getElementById('moveAssetFolders');
+    
+    if (!searchTerm || searchTerm.trim() === '') {
+        renderFoldersForModal(allFoldersData, currentFolderIdForModal, container);
+        return;
+    }
+    
+    const filteredFolders = filterFoldersRecursive(allFoldersData, searchTerm.toLowerCase());
+    
+    if (filteredFolders.length === 0) {
+        container.innerHTML = '<div class="px-4 py-8 text-xs text-gray-400 text-center"><svg class="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg><p class="font-medium">No folders found</p><p class="text-xs mt-1">Try a different search term</p></div>';
+        return;
+    }
+    
+    renderFoldersForModal(filteredFolders, currentFolderIdForModal, container);
+}
+
+function filterFoldersRecursive(folders, searchTerm) {
+    const filtered = [];
+    
+    folders.forEach(folder => {
+        const matches = folder.name.toLowerCase().includes(searchTerm);
+        const filteredChildren = folder.children && folder.children.length > 0 
+            ? filterFoldersRecursive(folder.children, searchTerm) 
+            : [];
+        
+        if (matches || filteredChildren.length > 0) {
+            filtered.push({
+                ...folder,
+                children: filteredChildren.length > 0 ? filteredChildren : folder.children
+            });
+        }
+    });
+    
+    return filtered;
+}
+
+async function moveAssetToFolder(targetFolderId, folderName, directoryPath = '') {
     const displayLocation = directoryPath || folderName;
     
     try {
         const formData = new FormData();
-        formData.append('asset_id', assetId);
+        formData.append('asset_id', currentMoveAssetId);
         formData.append('target_folder_id', targetFolderId || '');
         formData.append('_token', document.querySelector('meta[name="csrf-token"]')?.content || '');
 
@@ -1202,23 +1321,13 @@ async function quickMoveAsset(assetId, targetFolderId, folderName, directoryPath
 
         if (response.ok) {
             const result = await response.json();
+            closeMoveAssetModal();
             showToast(`Moved to: ${displayLocation}`, 'success');
             
-            // Remove the moved asset from the DOM with animation
-            const assetElement = document.querySelector(`[data-asset-id="${assetId}"]`);
-            if (assetElement) {
-                assetElement.style.transition = 'all 0.3s ease';
-                assetElement.style.transform = 'translateX(-100%)';
-                assetElement.style.opacity = '0';
-                setTimeout(() => {
-                    assetElement.remove();
-                    // Check if no more assets
-                    const remainingAssets = document.querySelectorAll('[data-asset-id]');
-                    if (remainingAssets.length === 0) {
-                        location.reload();
-                    }
-                }, 300);
-            }
+            // Refresh the page after successful move
+            setTimeout(() => {
+                location.reload();
+            }, 500);
         } else {
             const error = await response.json();
             showToast(error.error || error.message || 'Failed to move file', 'error');
@@ -1251,12 +1360,10 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// Close dropdowns on Escape key
+// Close modal on Escape key
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && activeDropdown) {
-        activeDropdown.classList.add('hidden');
-        activeDropdown = null;
-        document.removeEventListener('click', closeDropdownOnClickOutside);
+    if (e.key === 'Escape' && !document.getElementById('moveAssetModal').classList.contains('hidden')) {
+        closeMoveAssetModal();
     }
 });
 </script>

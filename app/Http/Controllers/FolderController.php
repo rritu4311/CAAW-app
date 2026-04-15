@@ -5,7 +5,14 @@ use App\Models\Folder;
 use App\Models\Asset;
 use App\Models\AssetVersion;
 use App\Models\Project;
+use App\Models\User;
 use App\Models\WorkspaceUser;
+use App\Models\ProjectCollaborator;
+use App\Notifications\AssetUploaded;
+use App\Notifications\AssetDeleted;
+use App\Notifications\FolderCreated;
+use App\Notifications\FolderDeleted;
+use App\Notifications\NewVersionUploaded;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -102,10 +109,59 @@ class FolderController extends Controller
         // Check write permissions - must be project owner or collaborator
         $projectId = $request->input('project_id');
         $project = Project::find($projectId);
-        
+
+        \Log::info('Folder creation attempt', [
+            'project_id' => $projectId,
+            'parent_folder_id' => $request->input('parent_folder_id'),
+            'name' => $request->input('name'),
+            'user_id' => auth()->id()
+        ]);
+
         if (!$project || !$this->hasWriteAccess($project, $request->user())) {
             return redirect()->back()
                 ->withErrors(['permission' => 'You do not have permission to create folders in this project'])
+                ->withInput();
+        }
+
+        // Manual duplicate check for better error handling
+        $name = $request->input('name');
+        $projectId = $request->input('project_id');
+        $parentFolderId = $request->input('parent_folder_id');
+
+        \Log::info('Checking for duplicate folder', [
+            'name' => $name,
+            'project_id' => $projectId,
+            'parent_folder_id' => $parentFolderId,
+            'all_folders_in_project' => Folder::where('project_id', $projectId)->get()->pluck('name', 'id')->toArray(),
+        ]);
+
+        // Check for duplicate in the same parent folder
+        $query = Folder::where('name', $name)
+            ->where('project_id', $projectId);
+
+        if ($parentFolderId) {
+            $query->where('parent_folder_id', $parentFolderId);
+        } else {
+            $query->whereNull('parent_folder_id');
+        }
+
+        $existingFolder = $query->first();
+
+        \Log::info('Duplicate folder check result', [
+            'found' => $existingFolder ? true : false,
+            'existing_folder_id' => $existingFolder ? $existingFolder->id : null,
+            'existing_folder_name' => $existingFolder ? $existingFolder->name : null,
+        ]);
+
+        if ($existingFolder) {
+            \Log::error('Duplicate folder detected', [
+                'name' => $name,
+                'project_id' => $projectId,
+                'parent_folder_id' => $parentFolderId,
+                'existing_folder_id' => $existingFolder->id
+            ]);
+            return redirect()->back()
+                ->with('error', "Folder '{$name}' already exists in this location")
                 ->withInput();
         }
 
@@ -114,17 +170,20 @@ class FolderController extends Controller
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('folders')
-                    ->where('project_id', $request->input('project_id'))
-                    ->where('parent_folder_id', $request->input('parent_folder_id')),
             ],
             'parent_folder_id' => 'nullable|exists:folders,id',
             'project_id' => 'required|exists:projects,id',
         ]);
 
         if ($validator->fails()) {
+            \Log::error('Folder validation failed', [
+                'errors' => $validator->errors()->toArray(),
+                'project_id' => $request->input('project_id'),
+                'parent_folder_id' => $request->input('parent_folder_id'),
+                'name' => $request->input('name')
+            ]);
             return redirect()->back()
-                ->withErrors($validator)
+                ->with('error', $validator->errors()->first())
                 ->withInput();
         }
 
@@ -135,6 +194,18 @@ class FolderController extends Controller
                 'parent_folder_id' => $request->input('parent_folder_id'),
                 'order' => 0,
             ]);
+
+            // Load project relationship for notification
+            $folder->load('project');
+
+            // Notify project members about the new folder
+            if ($folder->project) {
+                $this->notifyProjectMembers(
+                    $folder->project,
+                    new FolderCreated($folder, auth()->user()),
+                    [auth()->id()]
+                );
+            }
 
             // Handle different redirect scenarios
             if ($folder->parent_folder_id) {
@@ -253,18 +324,49 @@ class FolderController extends Controller
     {
         // Check write permissions - must be project owner or collaborator
         $project = $folder->project;
-        
+
         if (!$project || !$this->hasWriteAccess($project, auth()->user())) {
             return redirect()->back()
                 ->withErrors(['permission' => 'You do not have permission to delete folders in this project']);
         }
 
+        // Check if folder has content (files or subfolders)
+        $hasFiles = $folder->assets()->count() > 0;
+        $hasSubfolders = $folder->children()->count() > 0;
+
+        if ($hasFiles || $hasSubfolders) {
+            $message = [];
+            if ($hasFiles) {
+                $message[] = 'files';
+            }
+            if ($hasSubfolders) {
+                $message[] = 'subfolders';
+            }
+
+            return redirect()->back()
+                ->with('error', 'Cannot delete folder: It contains ' . implode(' and ', $message) . '. Please delete the content first.');
+        }
+
         // Store parent information before deletion
         $parentFolder = $folder->parent;
         $project = $folder->project;
-        
+
+        // Store folder data for notification
+        $folderName = $folder->name;
+        $projectName = $project ? $project->name : null;
+        $parentFolderName = $parentFolder ? $parentFolder->name : null;
+
+        // Notify project members about the folder deletion
+        if ($project) {
+            $this->notifyProjectMembers(
+                $project,
+                new FolderDeleted($folderName, $projectName, $parentFolderName, auth()->user()),
+                auth()->id()
+            );
+        }
+
         $this->deleteFolderRecursive($folder);
-        
+
         // Determine redirect destination
         if ($parentFolder) {
             // If folder has a parent, redirect to parent folder
@@ -417,9 +519,27 @@ class FolderController extends Controller
                     ->withErrors(['path' => 'File not found']);
             }
 
-            // Delete from database first
-            $asset = Asset::where('file_path', $path)->first();
+            // Get asset data before deletion for notification
+            $asset = Asset::where('file_path', $path)->with(['folder', 'project'])->first();
+            
             if ($asset) {
+                // Store asset data for notification
+                $assetName = $asset->name;
+                $assetType = $asset->file_type;
+                $projectName = $asset->project ? $asset->project->name : null;
+                $folderName = $asset->folder ? $asset->folder->name : null;
+                $project = $asset->project;
+
+                // Notify project members about the asset deletion
+                if ($project) {
+                    $this->notifyProjectMembers(
+                        $project,
+                        new AssetDeleted($assetName, $assetType, $projectName, $folderName, auth()->user()),
+                        [auth()->id()]
+                    );
+                }
+
+                // Delete from database
                 $asset->delete();
             }
 
@@ -464,7 +584,7 @@ class FolderController extends Controller
             // Validate size
             $fileType = $this->getFileType($mimeType);
             $maxSize = $this->maxSizes[$fileType] ?? 50 * 1024 * 1024;
-            
+
             if ($size > $maxSize) {
                 $maxSizeMB = $maxSize / (1024 * 1024);
                 return ['success' => false, 'error' => "File size exceeds {$maxSizeMB}MB limit"];
@@ -474,12 +594,28 @@ class FolderController extends Controller
             $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
             $hash = hash_file('sha256', $file->getPathname());
 
-            // Create folder path
-            $folderPath = $folder === 'root' ? 'uploads' : 'uploads/' . trim($folder, '/');
-            
+            // Create folder path - if folderId is provided, use it to get the correct folder
+            if ($folderId) {
+                $folderModel = Folder::find($folderId);
+                if ($folderModel) {
+                    // Build the full path from the folder hierarchy
+                    $folderPath = $this->getFolderPath($folderModel);
+                } else {
+                    $folderPath = $folder === 'root' ? 'uploads' : 'uploads/' . trim($folder, '/');
+                }
+            } else {
+                $folderPath = $folder === 'root' ? 'uploads' : 'uploads/' . trim($folder, '/');
+            }
+
+            \Log::info('Folder path determined', [
+                'folderPath' => $folderPath,
+                'folderId' => $folderId,
+            ]);
+
             // Ensure folder exists
             if (!Storage::disk('public')->exists($folderPath)) {
                 Storage::disk('public')->makeDirectory($folderPath);
+                \Log::info('Created folder path', ['folderPath' => $folderPath]);
             }
 
             // Check for duplicates in the same folder
@@ -496,12 +632,12 @@ class FolderController extends Controller
 
             // Store file
             $path = $file->storeAs($folderPath, $filename, 'public');
-            
+
             if (!$path) {
                 return ['success' => false, 'error' => 'Failed to store file'];
             }
 
-            // Use the provided folderId or get it from folder name
+            // Use the provided folderId
             if ($folderId === null && $folder !== 'root') {
                 $folderModel = Folder::where('name', $folder)->first();
                 $folderId = $folderModel ? $folderModel->id : null;
@@ -556,6 +692,18 @@ class FolderController extends Controller
                     'asset_id' => $asset->id,
                     'current_version_id' => $asset->current_version_id,
                 ]);
+
+                // Notify project members about the new asset
+                if ($asset->project_id) {
+                    $project = Project::find($asset->project_id);
+                    if ($project) {
+                        $this->notifyProjectMembers(
+                            $project,
+                            new AssetUploaded($asset, auth()->user()),
+                            auth()->id()
+                        );
+                    }
+                }
             } catch (\Exception $e) {
                 \Log::error('Failed to create AssetVersion in FolderController', [
                     'error' => $e->getMessage(),
@@ -625,11 +773,11 @@ class FolderController extends Controller
         if ($folder === 'root') {
             return [];
         }
-        
+
         $parts = explode('/', str_replace('uploads/', '', $folder));
         $breadcrumb = [];
         $currentPath = '';
-        
+
         foreach ($parts as $part) {
             $currentPath .= ($currentPath ? '/' : '') . $part;
             $breadcrumb[] = [
@@ -637,8 +785,25 @@ class FolderController extends Controller
                 'path' => 'uploads/' . $currentPath
             ];
         }
-        
+
         return $breadcrumb;
+    }
+
+    /**
+     * Build the full folder path from folder hierarchy
+     */
+    private function getFolderPath(Folder $folder): string
+    {
+        $pathParts = [];
+        $current = $folder;
+
+        // Build path from folder up to root
+        while ($current) {
+            array_unshift($pathParts, $current->name);
+            $current = $current->parent;
+        }
+
+        return 'uploads/' . implode('/', $pathParts);
     }
 
     /**
@@ -730,25 +895,36 @@ class FolderController extends Controller
     /**
      * Show all assets index page.
      */
-    public function indexAssets()
+    public function indexAssets(Request $request)
     {
         $user = auth()->user();
-        
+
         // Get all workspaces the user has access to
         $workspaceIds = \App\Models\WorkspaceUser::where('user_id', $user->id)
             ->where('status', 'approved')
             ->pluck('workspace_id');
-        
+
         // Get all projects in those workspaces
         $projectIds = \App\Models\Project::whereIn('workspace_id', $workspaceIds)
             ->pluck('id');
-        
-        // Get all assets from those projects
-        $assets = Asset::whereIn('project_id', $projectIds)
-            ->with(['folder', 'folder.project', 'uploadedBy'])
-            ->orderBy('created_at', 'desc')
+
+        // Build query
+        $query = Asset::whereIn('project_id', $projectIds)
+            ->with(['folder', 'folder.project', 'uploadedBy']);
+
+        // Handle status filter
+        $status = $request->query('status');
+        if ($status) {
+            // Map 'pending' to 'in_review' for user convenience
+            if ($status === 'pending') {
+                $status = 'in_review';
+            }
+            $query->where('status', $status);
+        }
+
+        $assets = $query->orderBy('created_at', 'desc')
             ->paginate(20);
-        
+
         return view('assets.index', compact('assets'));
     }
 
@@ -805,6 +981,12 @@ class FolderController extends Controller
             return redirect()->back()->with('error', 'Failed to submit asset for review. Asset must be in draft status.');
         }
 
+        // Get workflow_id from request, default to null if not provided
+        $workflowId = $request->input('workflow_id');
+
+        // Create approval assignments for project reviewers
+        $this->createApprovalsForAsset($asset, $project, $workflowId);
+
         return redirect()->back()->with('success', 'Asset submitted for review successfully');
     }
 
@@ -818,11 +1000,24 @@ class FolderController extends Controller
             return redirect()->back()->with('error', 'You are not authorized to approve this asset');
         }
 
-        if (!$asset->approve()) {
-            return redirect()->back()->with('error', 'Failed to approve asset');
+        // Find the user's approval record for this asset
+        $approval = $asset->approvals()
+            ->where('assigned_to', auth()->id())
+            ->where('status', 'pending')
+            ->first();
+
+        if (!$approval) {
+            return redirect()->back()->with('error', 'No pending approval found for this asset');
         }
 
-        return redirect()->back()->with('success', 'Asset approved successfully');
+        // Update the approval status - this will trigger the workflow logic
+        $approval->update([
+            'status' => 'approved',
+            'decided_at' => now(),
+            'decided_by' => auth()->id()
+        ]);
+
+        return redirect()->back()->with('success', 'Approval recorded successfully');
     }
 
     /**
@@ -845,9 +1040,26 @@ class FolderController extends Controller
                 ->withInput();
         }
 
-        if (!$asset->reject($request->input('reason') ?? '')) {
-            return redirect()->back()->with('error', 'Failed to reject asset');
+        // Find the user's approval record for this asset
+        $approval = $asset->approvals()
+            ->where('assigned_to', auth()->id())
+            ->where('status', 'pending')
+            ->first();
+
+        if (!$approval) {
+            return redirect()->back()->with('error', 'No pending approval found for this asset');
         }
+
+        // Update the approval status - this will trigger the workflow logic
+        $approval->update([
+            'status' => 'rejected',
+            'decision_reason' => $request->input('reason') ?? '',
+            'decided_at' => now(),
+            'decided_by' => auth()->id()
+        ]);
+
+        // Update asset status to rejected
+        $asset->update(['status' => 'rejected']);
 
         // Store rejection reason in asset version notes
         if ($asset->currentVersion) {
@@ -882,9 +1094,23 @@ class FolderController extends Controller
                 ->withInput();
         }
 
-        if (!$asset->requestChanges($request->input('comments'))) {
-            return redirect()->back()->with('error', 'Failed to request changes');
+        // Find the user's approval record for this asset
+        $approval = $asset->approvals()
+            ->where('assigned_to', auth()->id())
+            ->where('status', 'pending')
+            ->first();
+
+        if (!$approval) {
+            return redirect()->back()->with('error', 'No pending approval found for this asset');
         }
+
+        // Update the approval status - this will trigger the workflow logic
+        $approval->update([
+            'status' => 'changes_requested',
+            'decision_reason' => $request->input('comments'),
+            'decided_at' => now(),
+            'decided_by' => auth()->id()
+        ]);
 
         // Store comments in asset version notes
         if ($asset->currentVersion) {
@@ -907,13 +1133,18 @@ class FolderController extends Controller
         }
 
         // Create a comment in the comments table for the change request
-        \App\Models\Comment::create([
+        $comment = \App\Models\Comment::create([
             'asset_id' => $asset->id,
             'user_id' => auth()->id(),
             'text' => $request->input('comments'),
             'annotation_id' => $annotationId,
             'mentioned_users' => null,
         ]);
+
+        // Notify asset uploader about comment (if not the commenter)
+        if ($asset->uploadedBy && $asset->uploadedBy->id !== auth()->id()) {
+            $asset->uploadedBy->notify(new \App\Notifications\AssetCommented($asset, $comment, auth()->user()));
+        }
 
         // If annotation was created or annotation_id was provided, update annotation status
         if ($annotationId) {
@@ -925,6 +1156,95 @@ class FolderController extends Controller
         }
 
         return redirect()->back()->with('success', 'Changes requested successfully');
+    }
+
+    /**
+     * Create approval assignments for an asset.
+     */
+    private function createApprovalsForAsset(Asset $asset, Project $project, ?int $workflowId = null): void
+    {
+        // Get the workflow - use provided workflow_id or get/create default
+        if ($workflowId) {
+            $workflow = \App\Models\Workflow::findOrFail($workflowId);
+        } else {
+            $workflow = \App\Models\Workflow::firstOrCreate(
+                ['project_id' => $project->id],
+                [
+                    'name' => $project->name . ' Workflow',
+                    'definition' => ['sequential' => true],
+                ]
+            );
+        }
+
+        // For single template workflows, use the specific approver from workflow definition
+        if ($workflow && $workflow->type === 'single') {
+            $steps = $workflow->getSteps();
+            if (!empty($steps) && !empty($steps[0]['approvers'])) {
+                $singleApproverId = $steps[0]['approvers'][0];
+                try {
+                    $approval = \App\Models\Approval::create([
+                        'asset_id' => $asset->id,
+                        'workflow_id' => $workflow->id,
+                        'assigned_to' => $singleApproverId,
+                        'status' => 'pending',
+                        'order' => 1,
+                    ]);
+
+                    // Notify reviewer about asset ready for review (but not the uploader)
+                    if ($singleApproverId !== $asset->uploaded_by) {
+                        $reviewer = \App\Models\User::find($singleApproverId);
+                        if ($reviewer) {
+                            $reviewer->notify(new \App\Notifications\AssetReadyForReview($asset, $approval));
+                        }
+                    }
+                } catch (\Exception $e) {
+                    \Log::error("Failed to create approval for single approver {$singleApproverId}: " . $e->getMessage());
+                }
+            }
+            return;
+        }
+
+        // For other workflow types (sequential, parallel) or no workflow, use project reviewers
+        // Get project collaborators with reviewer/admin role
+        $collaborators = $project->projectCollaborators()
+            ->whereIn('role', ['admin', 'reviewer'])
+            ->where('status', 'approved')
+            ->with('user')
+            ->get();
+
+        // Collect valid users from collaborators
+        $reviewers = collect();
+        foreach ($collaborators as $collaborator) {
+            if ($collaborator->user) {
+                $reviewers->push($collaborator->user);
+            }
+        }
+
+        // Also include project owner if they exist
+        if ($project->creator) {
+            $reviewers->push($project->creator);
+        }
+
+        // Create approval assignments for each valid reviewer
+        foreach ($reviewers->unique('id') as $index => $reviewer) {
+            try {
+                $approval = \App\Models\Approval::create([
+                    'asset_id' => $asset->id,
+                    'workflow_id' => $workflow->id,
+                    'assigned_to' => $reviewer->id,
+                    'status' => 'pending',
+                    'order' => $index + 1,
+                ]);
+
+                // Notify reviewer about asset ready for review (but not the uploader)
+                if ($reviewer->id !== $asset->uploaded_by) {
+                    $reviewer->notify(new \App\Notifications\AssetReadyForReview($asset, $approval));
+                }
+            } catch (\Exception $e) {
+                \Log::error("Failed to create approval for user {$reviewer->id}: " . $e->getMessage());
+                continue;
+            }
+        }
     }
 
     /**
@@ -1052,7 +1372,21 @@ class FolderController extends Controller
 
             // Validate file type matches the original asset
             $fileType = $this->getFileType($mimeType);
+
+            \Log::info('File type validation for new version', [
+                'asset_id' => $asset->id,
+                'asset_name' => $asset->name,
+                'asset_file_type' => $asset->file_type,
+                'uploaded_mime_type' => $mimeType,
+                'uploaded_file_type' => $fileType,
+                'types_match' => $fileType === $asset->file_type,
+            ]);
+
             if ($fileType !== $asset->file_type) {
+                \Log::error('File type mismatch detected', [
+                    'asset_file_type' => $asset->file_type,
+                    'uploaded_file_type' => $fileType,
+                ]);
                 return redirect()->back()->with('error', 'File type must match the original asset');
             }
 
@@ -1100,6 +1434,15 @@ class FolderController extends Controller
                 'file_size' => $size,
             ]);
 
+            // Notify project members about the new version
+            if ($project) {
+                $this->notifyProjectMembers(
+                    $project,
+                    new NewVersionUploaded($asset, $newVersion, auth()->user()),
+                    [auth()->id()]
+                );
+            }
+
             return redirect()->back()->with('success', 'New version uploaded successfully');
 
         } catch (\Exception $e) {
@@ -1143,5 +1486,42 @@ class FolderController extends Controller
         $asset->version = $version->version_number;
 
         return view('assets.show', compact('asset', 'version'));
+    }
+
+    /**
+     * Notify project members about an event (excluding the actor).
+     */
+    private function notifyProjectMembers(Project $project, $notification, array $excludeUserIds = []): void
+    {
+        try {
+            // Get project owner
+            $membersToNotify = collect();
+            
+            if ($project->creator && !in_array($project->creator->id, $excludeUserIds)) {
+                $membersToNotify->push($project->creator);
+            }
+
+            // Get approved collaborators
+            $collaborators = ProjectCollaborator::where('project_id', $project->id)
+                ->where('status', 'approved')
+                ->with('user')
+                ->get();
+
+            foreach ($collaborators as $collaborator) {
+                if ($collaborator->user && !in_array($collaborator->user->id, $excludeUserIds)) {
+                    $membersToNotify->push($collaborator->user);
+                }
+            }
+
+            // Send notifications
+            foreach ($membersToNotify->unique('id') as $user) {
+                $user->notify($notification);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to notify project members', [
+                'project_id' => $project->id,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

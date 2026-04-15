@@ -13,7 +13,7 @@
         @csrf
     </form>
 
-    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6">
+    <form method="post" action="{{ route('profile.update') }}" enctype="multipart/form-data" class="mt-6 space-y-6">
         @csrf
         @method('patch')
 
@@ -43,6 +43,25 @@
                             {{ __('A new verification link has been sent to your email address.') }}
                         </p>
                     @endif
+                </div>
+            @endif
+        </div>
+
+        <div>
+            <x-input-label for="avatar" :value="__('Avatar')" />
+            <input id="avatar" name="avatar" type="file" class="mt-1 block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-gray-700 dark:file:text-gray-300" accept="image/*" />
+            <x-input-error class="mt-2" :messages="$errors->get('avatar')" />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {{ __('Upload a custom avatar. If no avatar is uploaded, Gravatar will be used.') }}
+            </p>
+            @if ($user->avatar)
+                <div class="mt-2">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="remove_avatar" value="1" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                            {{ __('Remove custom avatar and use Gravatar') }}
+                        </span>
+                    </label>
                 </div>
             @endif
         </div>

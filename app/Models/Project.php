@@ -6,10 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class Project extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     protected $fillable = [
         'workspace_id',
@@ -20,6 +22,13 @@ class Project extends Model
         'deadline',
         'created_by',
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'client_name', 'description', 'status', 'deadline', 'workspace_id'])
+            ->logOnlyDirty();
+    }
 
     protected $casts = [
         'deadline' => 'date',
@@ -53,6 +62,11 @@ class Project extends Model
     public function assets(): HasMany
     {
         return $this->hasMany(Asset::class);
+    }
+
+    public function workflows(): HasMany
+    {
+        return $this->hasMany(Workflow::class);
     }
 
     public function projectCollaborators(): HasMany

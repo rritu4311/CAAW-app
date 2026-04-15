@@ -431,6 +431,24 @@ class FileUploadController extends Controller
 
         $name = $request->input('name');
         $parentFolder = $request->input('parent_folder', 'root');
+
+        // Check for duplicate folder name in database
+        $parentFolderId = null;
+        if ($parentFolder !== 'root') {
+            $parentFolderModel = Folder::where('name', $parentFolder)->first();
+            $parentFolderId = $parentFolderModel ? $parentFolderModel->id : null;
+        }
+
+        $existingFolder = Folder::where('name', $name)
+            ->where('parent_folder_id', $parentFolderId)
+            ->first();
+
+        if ($existingFolder) {
+            return response()->json([
+                'success' => false,
+                'error' => "Folder '{$name}' already exists in this location",
+            ], 422);
+        }
         
         $folderPath = $parentFolder === 'root' 
             ? 'uploads/' . $name 
@@ -667,6 +685,23 @@ class FileUploadController extends Controller
 
         $name = $request->input('name');
         $parentFolder = $request->input('parent_folder', 'root');
+
+        // Check for duplicate folder name in database
+        $parentFolderId = null;
+        if ($parentFolder !== 'root') {
+            $parentFolderModel = Folder::where('name', $parentFolder)->first();
+            $parentFolderId = $parentFolderModel ? $parentFolderModel->id : null;
+        }
+
+        $existingFolder = Folder::where('name', $name)
+            ->where('parent_folder_id', $parentFolderId)
+            ->first();
+
+        if ($existingFolder) {
+            return redirect()->back()
+                ->withErrors(['name' => "Folder '{$name}' already exists in this location"])
+                ->withInput();
+        }
         
         $folderPath = $parentFolder === 'root' 
             ? 'uploads/' . $name 
@@ -781,6 +816,25 @@ class FileUploadController extends Controller
                     'success' => false,
                     'error' => 'Folder not found',
                 ], 404);
+            }
+
+            // Check if folder has content (files or subfolders)
+            $files = Storage::disk('public')->files($path);
+            $directories = Storage::disk('public')->directories($path);
+
+            if (count($files) > 0 || count($directories) > 0) {
+                $message = [];
+                if (count($files) > 0) {
+                    $message[] = count($files) . ' file(s)';
+                }
+                if (count($directories) > 0) {
+                    $message[] = count($directories) . ' subfolder(s)';
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Cannot delete folder: It contains ' . implode(' and ', $message) . '. Please delete the content first.',
+                ], 422);
             }
 
             Storage::disk('public')->deleteDirectory($path);

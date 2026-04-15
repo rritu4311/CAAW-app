@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\User;
 use App\Models\WorkspaceUser;
 use App\Notifications\AccessShare;
+use App\Notifications\MemberRemoved;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
@@ -202,8 +203,6 @@ class WorkspaceController extends Controller
                 // Send notification to the invited user that invitation has been sent
                 $user->notify(new AccessShare($workspace, $request->user(), 'pending'));
                 
-                // Send notification to workspace owner about the pending request
-                $workspace->owner->notify(new \App\Notifications\WorkspaceRequestPending($workspaceUser, $user));
             }
 
             return redirect()->route('workspaces.share', $workspace)
@@ -236,6 +235,13 @@ class WorkspaceController extends Controller
                 abort(403, 'Admins can only remove regular members');
             }
         }
+
+        // Notify workspace members about the member removal
+        $this->notifyWorkspaceMembers(
+            $workspace,
+            new MemberRemoved($workspace->name, 'workspace', $user->name, $request->user()),
+            [$request->user()->id, $user->id] // Exclude the remover and the removed user
+        );
 
         // Remove all workspace user records for this user (both approved and pending)
         WorkspaceUser::where('workspace_id', $workspace->id)
@@ -367,58 +373,173 @@ class WorkspaceController extends Controller
     {
         $user = $request->user();
 
-        // Get all workspaces owned by the user
-        $workspaces = $user->workspaces()->orderBy('created_at', 'desc')->get()->map(function ($item) {
-            $item->type = 'workspace';
-            return $item;
-        });
+        // Get activities from the Spatie activity_log table
+        $activities = \Spatie\Activitylog\Models\Activity::where('causer_id', $user->id)
+            ->where('causer_type', get_class($user))
+            ->with('subject')
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
 
-        // Get all projects created by the user (across all workspaces)
-        $projects = Project::where('created_by', $user->id)->orderBy('created_at', 'desc')->get()->map(function ($item) {
-            $item->type = 'project';
-            return $item;
-        });
+        return view('activity-log', compact('activities'));
+    }
 
-        // Get all folders (through projects owned by user)
-        $folders = collect();
-        foreach ($projects as $project) {
-            $folders = $folders->merge($project->folders()->orderBy('created_at', 'desc')->get());
+    /**
+     * Bulk invite via CSV upload for workspace.
+     */
+    public function bulkInvite(Request $request, Workspace $workspace)
+    {
+        if (!$this->hasAdminAccess($workspace, $request->user())) {
+            abort(403);
         }
-        $folders = $folders->map(function ($item) {
-            $item->type = 'folder';
-            return $item;
-        });
 
-        // Get all assets (through folders)
-        $assets = collect();
-        foreach ($folders as $folder) {
-            $assets = $assets->merge($folder->assets()->orderBy('created_at', 'desc')->get());
+        $request->validate([
+            'csv_file' => 'required|file|mimes:csv,txt',
+            'role' => 'required|in:user,admin'
+        ]);
+
+        $file = $request->file('csv_file');
+        $defaultRole = $request->input('role');
+
+        // Only workspace owner can invite admins
+        if ($defaultRole === 'admin' && !$workspace->isOwnedBy($request->user())) {
+            return redirect()->back()
+                ->withErrors(['role' => 'Only the workspace owner can invite admins'])
+                ->withInput();
         }
-        $assets = $assets->map(function ($item) {
-            $item->type = 'asset';
-            return $item;
-        });
 
-        // Combine all items and sort by creation time (most recent first)
-        $activities = collect()
-            ->merge($workspaces)
-            ->merge($projects)
-            ->merge($folders)
-            ->merge($assets)
-            ->sortByDesc('created_at')
-            ->values();
+        // Parse CSV file
+        $csvData = [];
+        $handle = fopen($file->getPathname(), 'r');
+        
+        if ($handle !== false) {
+            // Skip header row if it exists
+            $header = fgetcsv($handle);
+            
+            // Check if header contains 'email' column
+            $hasHeader = $header && in_array('email', array_map('strtolower', $header));
+            
+            if (!$hasHeader) {
+                // If no header, rewind to start
+                rewind($handle);
+            }
+            
+            while (($row = fgetcsv($handle)) !== false) {
+                if ($hasHeader) {
+                    // Map columns by header names
+                    $email = $row[array_search('email', array_map('strtolower', $header))] ?? null;
+                    $role = $row[array_search('role', array_map('strtolower', $header))] ?? $defaultRole;
+                } else {
+                    // Assume first column is email, second is role (optional)
+                    $email = $row[0] ?? null;
+                    $role = $row[1] ?? $defaultRole;
+                }
+                
+                if ($email) {
+                    $csvData[] = [
+                        'email' => trim($email),
+                        'role' => trim($role) ?: $defaultRole
+                    ];
+                }
+            }
+            fclose($handle);
+        }
 
-        // Paginate the activities (10 per page)
-        $perPage = 10;
-        $currentPage = $request->get('page', 1);
-        $paginatedActivities = new \Illuminate\Pagination\LengthAwarePaginator(
-            $activities->forPage($currentPage, $perPage),
-            $activities->count(),
-            $perPage,
-            $currentPage,
-            ['path' => $request->url(), 'pageName' => 'page']
-        );
+        $invitedCount = 0;
+        $skippedCount = 0;
 
-        return view('activity-log', compact('paginatedActivities'));
+        foreach ($csvData as $data) {
+            $email = $data['email'];
+            $role = $data['role'];
+
+            // Validate role
+            if (!in_array($role, ['user', 'admin'])) {
+                $role = $defaultRole;
+            }
+
+            // Only workspace owner can invite admins
+            if ($role === 'admin' && !$workspace->isOwnedBy($request->user())) {
+                $role = 'user';
+            }
+
+            $user = User::where('email', $email)->first();
+
+            if ($user) {
+                // Check if user is already a member
+                $existingMembership = WorkspaceUser::where('workspace_id', $workspace->id)
+                    ->where('user_id', $user->id)
+                    ->where('status', 'approved')
+                    ->first();
+
+                if ($existingMembership) {
+                    $skippedCount++;
+                    continue;
+                }
+
+                // Check if there's already a pending request
+                $existingPendingRequest = WorkspaceUser::where('workspace_id', $workspace->id)
+                    ->where('user_id', $user->id)
+                    ->where('status', 'pending')
+                    ->first();
+
+                if ($existingPendingRequest) {
+                    $skippedCount++;
+                    continue;
+                }
+
+                // Create workspace user record
+                $workspaceUser = WorkspaceUser::create([
+                    'workspace_id' => $workspace->id,
+                    'user_id' => $user->id,
+                    'role' => $role,
+                    'status' => 'pending'
+                ]);
+
+                // Send notification
+                $user->notify(new AccessShare($workspace, $request->user(), 'pending'));
+                $invitedCount++;
+            } else {
+                $skippedCount++;
+            }
+        }
+
+        return redirect()->route('workspaces.share', $workspace)
+            ->with('success', "Bulk invite completed: {$invitedCount} invitations sent, {$skippedCount} skipped (users not found or already invited)");
+    }
+
+    /**
+     * Notify workspace members about an event (excluding specified users).
+     */
+    private function notifyWorkspaceMembers(Workspace $workspace, $notification, array $excludeUserIds = []): void
+    {
+        try {
+            $membersToNotify = collect();
+
+            // Get workspace owner
+            if ($workspace->owner && !in_array($workspace->owner->id, $excludeUserIds)) {
+                $membersToNotify->push($workspace->owner);
+            }
+
+            // Get approved workspace members
+            $workspaceUsers = WorkspaceUser::where('workspace_id', $workspace->id)
+                ->where('status', 'approved')
+                ->with('user')
+                ->get();
+
+            foreach ($workspaceUsers as $workspaceUser) {
+                if ($workspaceUser->user && !in_array($workspaceUser->user->id, $excludeUserIds)) {
+                    $membersToNotify->push($workspaceUser->user);
+                }
+            }
+
+            // Send notifications
+            foreach ($membersToNotify->unique('id') as $user) {
+                $user->notify($notification);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to notify workspace members', [
+                'workspace_id' => $workspace->id,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }
