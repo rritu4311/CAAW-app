@@ -188,11 +188,16 @@ class FolderController extends Controller
         }
 
         try {
+            // Get the maximum order value for this parent_id
+            $parentId = $request->input('parent_folder_id');
+            $maxOrder = Folder::getMaxOrder($parentId);
+            $newOrder = $maxOrder + 1;
+
             $folder = Folder::create([
                 'name' => $request->input('name'),
                 'project_id' => $request->input('project_id'),
-                'parent_folder_id' => $request->input('parent_folder_id'),
-                'order' => 0,
+                'parent_folder_id' => $parentId,
+                'order' => $newOrder,
             ]);
 
             // Load project relationship for notification
@@ -350,6 +355,7 @@ class FolderController extends Controller
         // Store parent information before deletion
         $parentFolder = $folder->parent;
         $project = $folder->project;
+        $parentId = $folder->parent_folder_id;
 
         // Store folder data for notification
         $folderName = $folder->name;
@@ -361,11 +367,16 @@ class FolderController extends Controller
             $this->notifyProjectMembers(
                 $project,
                 new FolderDeleted($folderName, $projectName, $parentFolderName, auth()->user()),
-                auth()->id()
+                [auth()->id()]
             );
         }
 
-        $this->deleteFolderRecursive($folder);
+        // Delete folder and reorder siblings in transaction
+        \DB::transaction(function () use ($folder, $parentId) {
+            $this->deleteFolderRecursive($folder);
+            // Reorder remaining siblings to maintain sequential order (0,1,2,...)
+            Folder::reorderSiblings($parentId);
+        });
 
         // Determine redirect destination
         if ($parentFolder) {
@@ -844,6 +855,132 @@ class FolderController extends Controller
             return response()->json(['success' => true, 'message' => 'File moved successfully']);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to move file: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Get ordered folders by parent_id.
+     * Returns folders ordered by order column (0,1,2,...)
+     */
+    public function getByParent(Request $request, $parentId = null)
+    {
+        // Validate parent_id exists if provided
+        if ($parentId !== null) {
+            $parentFolder = Folder::find($parentId);
+            if (!$parentFolder) {
+                return response()->json(['error' => 'Parent folder not found'], 404);
+            }
+
+            // Check read access to the project
+            $project = $parentFolder->project;
+            if (!$project) {
+                return response()->json(['error' => 'Project not found'], 404);
+            }
+        }
+
+        // Get folders ordered by order column
+        $folders = Folder::byParent($parentId)
+            ->ordered()
+            ->with(['children' => function($query) {
+                $query->orderBy('order');
+            }])
+            ->get();
+
+        return response()->json([
+            'folders' => $folders,
+            'parent_id' => $parentId
+        ]);
+    }
+
+    /**
+     * Reorder folders via drag-and-drop.
+     * Accepts array of folder IDs in new order and updates order column.
+     */
+    public function reorder(Request $request)
+    {
+        \Log::info('Reorder request received', $request->all());
+
+        $validator = Validator::make($request->all(), [
+            'folder_ids' => 'required|array',
+            'folder_ids.*' => 'required|integer|exists:folders,id',
+            'parent_id' => 'nullable|integer',
+        ]);
+
+        if ($validator->fails()) {
+            \Log::error('Validation failed', $validator->errors()->toArray());
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
+
+        $folderIds = $request->input('folder_ids');
+        $parentId = $request->input('parent_id');
+
+        \Log::info('Reorder parameters', ['folder_ids' => $folderIds, 'parent_id' => $parentId]);
+
+        // If parent_id is provided, verify it exists
+        if ($parentId !== null) {
+            $parentFolder = Folder::find($parentId);
+            if (!$parentFolder) {
+                \Log::error('Parent folder not found', ['parent_id' => $parentId]);
+                return response()->json(['error' => 'Parent folder not found'], 404);
+            }
+        }
+
+        // Verify all folders belong to the same parent
+        foreach ($folderIds as $folderId) {
+            $folder = Folder::find($folderId);
+            if (!$folder) {
+                \Log::error('Folder not found', ['folder_id' => $folderId]);
+                return response()->json(['error' => 'Folder not found'], 404);
+            }
+
+            \Log::info('Checking folder', [
+                'folder_id' => $folderId,
+                'folder_parent_folder_id' => $folder->parent_folder_id,
+                'requested_parent_id' => $parentId,
+                'match' => $folder->parent_folder_id == $parentId
+            ]);
+
+            // Check parent_folder_id matches (both null or both same value)
+            // Treat both 0 and null as root level
+            $folderParent = $folder->parent_folder_id;
+            $requestedParent = $parentId;
+
+            // Normalize: treat 0 as null for root folders
+            if ($folderParent === 0) $folderParent = null;
+            if ($requestedParent === 0) $requestedParent = null;
+
+            if ($folderParent != $requestedParent) {
+                \Log::error('Parent mismatch', [
+                    'folder_id' => $folderId,
+                    'folder_parent_folder_id' => $folder->parent_folder_id,
+                    'requested_parent_id' => $parentId,
+                    'normalized_folder_parent' => $folderParent,
+                    'normalized_requested_parent' => $requestedParent
+                ]);
+                return response()->json(['error' => 'All folders must belong to the same parent'], 400);
+            }
+
+            // Check write access to the project
+            $project = $folder->project;
+            if (!$project || !$this->hasWriteAccess($project, $request->user())) {
+                \Log::error('Permission denied', ['folder_id' => $folderId]);
+                return response()->json(['error' => 'You do not have permission to reorder folders in this project'], 403);
+            }
+        }
+
+        try {
+            \Log::info('Starting bulk update order', ['folder_ids' => $folderIds, 'parent_id' => $parentId]);
+            // Bulk update order using transaction
+            Folder::bulkUpdateOrder($folderIds, $parentId);
+
+            \Log::info('Bulk update order successful');
+            return response()->json([
+                'success' => true,
+                'message' => 'Folders reordered successfully'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Bulk update order failed', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Failed to reorder folders: ' . $e->getMessage()], 500);
         }
     }
 

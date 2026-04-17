@@ -33,6 +33,11 @@ Route::middleware('auth')->group(function () {
     
     // Folder management routes (pure Laravel)
     Route::get('/folder-manager', [FolderController::class, 'index'])->name('folder-manager');
+    
+    // Folder ordering routes for drag-and-drop (must be before dynamic routes)
+    Route::get('/folders/by-parent/{parentId?}', [FolderController::class, 'getByParent'])->name('folders.by-parent');
+    Route::post('/folders/reorder', [FolderController::class, 'reorder'])->name('folders.reorder');
+    
     Route::post('/folders/store', [FolderController::class, 'store'])->name('folders.store');
     Route::post('/folders/upload', [FolderController::class, 'uploadFiles'])->name('folders.upload');
     Route::delete('/folders/file', [FolderController::class, 'deleteFile'])->name('folders.file.delete');

@@ -61,6 +61,7 @@ class ProjectController extends Controller
         $folders = Folder::where('project_id', $project->id)
             ->whereNull('parent_folder_id')
             ->with('children')
+            ->orderBy('order')
             ->get();
 
         $project->load('workflows');

@@ -1,3 +1,42 @@
+/* Force light mode - prevent system dark mode */
+@layer base {
+    :root {
+        color-scheme: light only;
+    }
+
+    html {
+        color-scheme: light only;
+        forced-color-adjust: none;
+    }
+
+    /* Override any system-level dark mode preferences */
+    @media (prefers-color-scheme: dark) {
+        :root {
+            color-scheme: light;
+        }
+    }
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Force light mode globally */
+body {
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+}
+
+/* Prevent dark mode from being applied via JavaScript or other means */
+.dark,
+[data-theme="dark"],
+[data-color-scheme="dark"] {
+    color-scheme: light !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+}
+
+/* Ensure all text remains dark on light backgrounds */
+* {
+    color-scheme: light !important;
+}
