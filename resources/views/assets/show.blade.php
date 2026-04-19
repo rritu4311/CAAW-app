@@ -270,8 +270,8 @@
  <div class="space-y-4">
  @foreach($asset->annotations as $annotation)
  <div class="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 ">
- <div class="flex items-start justify-between mb-3">
- <div class="flex items-center gap-2">
+ <div class="mb-3">
+ <div class="flex items-center gap-2 mb-2">
  @if($annotation->isPending())
  <span class="px-2 py-1 text-xs font-medium bg-yellow-100 dark:bg-yellow-900 text-yellow-800 rounded-full">Pending</span>
  @elseif($annotation->isAcknowledged())
@@ -284,7 +284,22 @@
  View
  </button>
  </div>
- <div class="flex items-center gap-2">
+ <div class="flex justify-end gap-2">
+ @if($annotation->isPending())
+ <button onclick="acknowledgeAnnotation({{ $annotation->id }})"
+ class="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors">
+ Acknowledge
+ </button>
+ <button onclick="resolveAnnotation({{ $annotation->id }})"
+ class="text-xs px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded transition-colors">
+ Resolve
+ </button>
+ @elseif($annotation->isAcknowledged())
+ <button onclick="resolveAnnotation({{ $annotation->id }})"
+ class="text-xs px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded transition-colors">
+ Resolve
+ </button>
+ @endif
  @if(auth()->check() && auth()->id() === $annotation->created_by)
  <button onclick="deleteAnnotation({{ $annotation->id }})"
  class="text-xs px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded transition-colors">
@@ -888,6 +903,50 @@ function deleteAnnotation(annotationId) {
  })
  .catch(error => {
  alert('Error deleting annotation: ' + error.message);
+ });
+}
+
+// Acknowledge annotation
+function acknowledgeAnnotation(annotationId) {
+ fetch(`/assets/{{ $asset->id }}/annotations/${annotationId}/acknowledge`, {
+ method: 'POST',
+ headers: {
+ 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+ 'Content-Type': 'application/json'
+ }
+ })
+ .then(response => response.json())
+ .then(data => {
+ if (data.success) {
+ location.reload();
+ } else {
+ alert('Failed to acknowledge annotation: ' + (data.error || 'Unknown error'));
+ }
+ })
+ .catch(error => {
+ alert('Error acknowledging annotation: ' + error.message);
+ });
+}
+
+// Resolve annotation
+function resolveAnnotation(annotationId) {
+ fetch(`/assets/{{ $asset->id }}/annotations/${annotationId}/resolve`, {
+ method: 'POST',
+ headers: {
+ 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+ 'Content-Type': 'application/json'
+ }
+ })
+ .then(response => response.json())
+ .then(data => {
+ if (data.success) {
+ location.reload();
+ } else {
+ alert('Failed to resolve annotation: ' + (data.error || 'Unknown error'));
+ }
+ })
+ .catch(error => {
+ alert('Error resolving annotation: ' + error.message);
  });
 }
 

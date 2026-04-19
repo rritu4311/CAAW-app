@@ -711,7 +711,7 @@ class FolderController extends Controller
                         $this->notifyProjectMembers(
                             $project,
                             new AssetUploaded($asset, auth()->user()),
-                            auth()->id()
+                            [auth()->id()]
                         );
                     }
                 }
@@ -1114,6 +1114,14 @@ class FolderController extends Controller
             return redirect()->back()->with('error', 'You do not have permission to submit this asset for review');
         }
 
+        // Check if all annotations are resolved
+        if ($asset->annotations && $asset->annotations->count() > 0) {
+            $unresolvedAnnotations = $asset->annotations->where('status', '!=', 'resolved');
+            if ($unresolvedAnnotations->count() > 0) {
+                return redirect()->back()->with('error', 'Cannot submit for review. All annotations must be resolved first.');
+            }
+        }
+
         if (!$asset->submitForReview()) {
             return redirect()->back()->with('error', 'Failed to submit asset for review. Asset must be in draft status.');
         }
@@ -1248,6 +1256,7 @@ class FolderController extends Controller
             'decided_at' => now(),
             'decided_by' => auth()->id()
         ]);
+        $asset->update(['status' => 'draft']);
 
         // Store comments in asset version notes
         if ($asset->currentVersion) {
@@ -1474,6 +1483,50 @@ class FolderController extends Controller
         $annotation->delete();
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Acknowledge annotation.
+     */
+    public function acknowledgeAnnotation(Request $request, Asset $asset, \App\Models\Annotation $annotation)
+    {
+        // Check if user is the asset owner
+        if ($asset->uploaded_by !== auth()->id()) {
+            return response()->json(['error' => 'You are not authorized to acknowledge annotations on this asset'], 403);
+        }
+
+        // Check if user has access to the asset
+        if (!auth()->user()->can('view', $asset)) {
+            return response()->json(['error' => 'You do not have access to this asset'], 403);
+        }
+
+        if (!$annotation->acknowledge()) {
+            return response()->json(['error' => 'Failed to acknowledge annotation. Annotation must be in pending status.'], 422);
+        }
+
+        return response()->json(['success' => true, 'annotation' => $annotation]);
+    }
+
+    /**
+     * Resolve annotation.
+     */
+    public function resolveAnnotation(Request $request, Asset $asset, \App\Models\Annotation $annotation)
+    {
+        // Check if user is the asset owner
+        if ($asset->uploaded_by !== auth()->id()) {
+            return response()->json(['error' => 'You are not authorized to resolve annotations on this asset'], 403);
+        }
+
+        // Check if user has access to the asset
+        if (!auth()->user()->can('view', $asset)) {
+            return response()->json(['error' => 'You do not have access to this asset'], 403);
+        }
+
+        if (!$annotation->resolve()) {
+            return response()->json(['error' => 'Failed to resolve annotation'], 422);
+        }
+
+        return response()->json(['success' => true, 'annotation' => $annotation]);
     }
 
     /**

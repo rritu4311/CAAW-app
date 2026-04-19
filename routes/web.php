@@ -159,6 +159,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/assets/{asset}/annotations', [FolderController::class, 'storeAnnotation'])->name('assets.annotations.store');
     Route::put('/assets/{asset}/annotations/{annotation}', [FolderController::class, 'updateAnnotation'])->name('assets.annotations.update');
     Route::delete('/assets/{asset}/annotations/{annotation}', [FolderController::class, 'deleteAnnotation'])->name('assets.annotations.delete');
+    Route::post('/assets/{asset}/annotations/{annotation}/acknowledge', [FolderController::class, 'acknowledgeAnnotation'])->name('assets.annotations.acknowledge');
+    Route::post('/assets/{asset}/annotations/{annotation}/resolve', [FolderController::class, 'resolveAnnotation'])->name('assets.annotations.resolve');
 
     // Asset version routes
     Route::post('/assets/{asset}/upload-version', [FolderController::class, 'uploadNewVersion'])->name('assets.upload-version');
