@@ -4,7 +4,7 @@
 
 <!-- Notification Icon - Direct Link to Full View -->
 <a href="{{ route('notifications.index') }}" 
- class="relative p-2 text-white hover:bg-white dark:bg-gray-800/10 rounded-lg transition-colors duration-200 inline-flex items-center"
+ class="notifications bell relative p-2 text-white hover:bg-blue-600 dark:bg-gray-800/10 rounded-lg transition-colors duration-200 inline-flex items-center"
  title="Notifications">
  
  <!-- Bell Icon -->
@@ -16,9 +16,14 @@
  
  <!-- Notification Badge -->
  @if($unreadCount > 0)
- <span class="absolute -top-1 -right-1 bg-red-500 text-red-500 text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center animate-pulse">
- {{ $unreadCount > 99 ? '99+' : $unreadCount }}
+ <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center animate-pulse">
+ {{ $unreadCount > 9 ? '9+' : $unreadCount }}
  </span>
  @endif
 </a>
 
+<style>
+    .notifications.bell:hover {
+        color:#38bdf8 !important;
+    }
+</style>

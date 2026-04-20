@@ -1161,6 +1161,7 @@ class FolderController extends Controller
             'decided_at' => now(),
             'decided_by' => auth()->id()
         ]);
+        $asset->update(['status' => 'approved']);
 
         return redirect()->back()->with('success', 'Approval recorded successfully');
     }
